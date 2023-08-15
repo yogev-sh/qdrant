@@ -72,6 +72,8 @@ pub struct StorageConfig {
     pub recovery_mode: Option<String>,
     #[serde(default)]
     pub update_concurrency: Option<NonZeroUsize>,
+    #[serde(default)]
+    pub gpu_indexing: bool,
 }
 
 impl StorageConfig {

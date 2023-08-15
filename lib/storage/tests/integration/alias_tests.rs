@@ -58,6 +58,7 @@ fn test_alias_operation() {
         async_scorer: false,
         update_concurrency: Some(NonZeroUsize::new(2).unwrap()),
         // update_concurrency: None,
+        gpu_indexing: false,
     };
 
     let search_runtime = Runtime::new().unwrap();

@@ -67,6 +67,7 @@ futures = "0.3.28"
 charabia = { version = "0.8.5", default-features = false, features = ["greek", "hebrew", "thai"] }
 
 common = { path = "../common/common" }
+gpu = { path = "../gpu" }
 io = { path = "../common/io" }
 memory = { path = "../common/memory" }
 sparse = { path = "../sparse" }
