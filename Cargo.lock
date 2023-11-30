@@ -1071,6 +1071,7 @@ dependencies = [
  "indicatif",
  "io",
  "itertools 0.12.0",
+ "lazy_static",
  "log",
  "merge",
  "num_cpus",
@@ -1127,6 +1128,7 @@ dependencies = [
  "serde",
  "thiserror",
  "thread-priority",
+ "tokio",
  "validator",
 ]
 
