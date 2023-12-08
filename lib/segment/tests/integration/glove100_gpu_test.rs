@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::sync::atomic::AtomicBool;
@@ -13,7 +13,6 @@ use segment::segment_constructor::build_segment;
 use segment::types::{
     HnswConfig, Indexes, SegmentConfig, SeqNumberType, VectorDataConfig, VectorStorageType,
 };
-use segment::vector_storage::ScoredPointOffset;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -65,6 +64,7 @@ fn test_filterable_hnsw() {
             },
         )]),
         payload_storage_type: Default::default(),
+        sparse_vector_data: Default::default(),
     };
 
     let mut segment = build_segment(dir.path(), &config, true).unwrap();
@@ -92,6 +92,7 @@ fn test_filterable_hnsw() {
         segment.vector_data[DEFAULT_VECTOR_NAME]
             .vector_storage
             .clone(),
+        None,
         segment.payload_index.clone(),
         hnsw_config,
     )

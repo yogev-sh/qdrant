@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
-use parking_lot::Mutex;
+use bitvec::vec::BitVec;
+use common::types::PointOffsetType;
+use parking_lot::{Mutex, RwLock};
 use rand::Rng;
 
 use super::cpu_graph_builder::CpuGraphBuilder;
 use super::gpu_graph_builder::GpuGraphBuilder;
 use crate::index::hnsw_index::graph_layers_builder::GraphLayersBuilder;
-use crate::types::PointOffsetType;
 use crate::vector_storage::{RawScorer, VectorStorageEnum};
 
 pub const CPU_POINTS_COUNT_MULTIPLICATOR: usize = 8;
@@ -26,6 +27,7 @@ impl<'a, TFabric> CombinedGraphBuilder<'a, TFabric>
 where
     TFabric: Fn() -> Box<dyn RawScorer + 'a> + Send + Sync + 'a,
 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new<R>(
         num_vectors: usize,
         m: usize,
@@ -71,6 +73,10 @@ where
     }
 
     pub fn into_graph_layers_builder(self) -> GraphLayersBuilder {
+        let ready_list = RwLock::new(BitVec::repeat(
+            false,
+            self.cpu_builder.graph_layers_builder.links_layers.len(),
+        ));
         let mut links_layers = vec![];
         for point_levels in &self.cpu_builder.graph_layers_builder.links_layers {
             let mut layers = vec![];
@@ -101,6 +107,7 @@ where
                     .clone(),
             ),
             visited_pool: crate::index::visited_pool::VisitedPool::new(),
+            ready_list,
         }
     }
 
@@ -205,6 +212,7 @@ where
 #[cfg(test)]
 mod tests {
     use common::fixed_length_priority_queue::FixedLengthPriorityQueue;
+    use common::types::ScoredPointOffset;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 
@@ -217,9 +225,9 @@ mod tests {
     use crate::index::hnsw_index::graph_links::GraphLinksRam;
     use crate::index::hnsw_index::point_scorer::FilteredScorer;
     use crate::spaces::simple::CosineMetric;
-    use crate::types::{Distance, PointOffsetType};
+    use crate::types::Distance;
     use crate::vector_storage::simple_vector_storage::open_simple_vector_storage;
-    use crate::vector_storage::{ScoredPointOffset, VectorStorage};
+    use crate::vector_storage::VectorStorage;
 
     #[test]
     fn test_gpu_hnsw_equal() {
@@ -241,7 +249,7 @@ mod tests {
             let mut borrowed_storage = storage.borrow_mut();
             for idx in 0..(num_vectors as PointOffsetType) {
                 borrowed_storage
-                    .insert_vector(idx, vector_holder.vectors.get(idx))
+                    .insert_vector(idx, vector_holder.vectors.get(idx).into())
                     .unwrap();
             }
         }
@@ -253,7 +261,11 @@ mod tests {
             m0,
             ef_construct,
             entry_points_num,
-            || vector_holder.get_raw_scorer(added_vector.clone()),
+            || {
+                vector_holder
+                    .get_raw_scorer(added_vector.clone().into())
+                    .unwrap()
+            },
             &storage.borrow(),
             &mut rng,
             cpu_threads_count,
@@ -274,7 +286,7 @@ mod tests {
         for idx in 0..(num_vectors as PointOffsetType) {
             let fake_filter_context = FakeFilterContext {};
             let added_vector = vector_holder.vectors.get(idx).to_vec();
-            let raw_scorer = vector_holder.get_raw_scorer(added_vector.clone());
+            let raw_scorer = vector_holder.get_raw_scorer(added_vector.clone()).unwrap();
 
             let scorer = FilteredScorer::new(raw_scorer.as_ref(), Some(&fake_filter_context));
             graph_layers_1.set_levels(idx, graph_layers_2.cpu_builder.get_point_level(idx));
@@ -312,7 +324,7 @@ mod tests {
             let mut borrowed_storage = storage.borrow_mut();
             for idx in 0..(num_vectors as PointOffsetType) {
                 borrowed_storage
-                    .insert_vector(idx, vector_holder.vectors.get(idx))
+                    .insert_vector(idx, vector_holder.vectors.get(idx).into())
                     .unwrap();
             }
         }
@@ -324,7 +336,7 @@ mod tests {
             m0,
             ef_construct,
             entry_points_num,
-            || vector_holder.get_raw_scorer(added_vector.clone()),
+            || vector_holder.get_raw_scorer(added_vector.clone()).unwrap(),
             &storage.borrow(),
             &mut rng,
             cpu_threads_count,
@@ -346,7 +358,7 @@ mod tests {
         for idx in 0..(num_vectors as PointOffsetType) {
             let fake_filter_context = FakeFilterContext {};
             let added_vector = vector_holder.vectors.get(idx).to_vec();
-            let raw_scorer = vector_holder.get_raw_scorer(added_vector.clone());
+            let raw_scorer = vector_holder.get_raw_scorer(added_vector.clone()).unwrap();
 
             let scorer = FilteredScorer::new(raw_scorer.as_ref(), Some(&fake_filter_context));
             graph_layers_1.set_levels(idx, graph_layers_2.cpu_builder.get_point_level(idx));
@@ -371,7 +383,7 @@ mod tests {
         for _ in 0..attempts {
             let query = random_vector(&mut rng, dim);
             let fake_filter_context = FakeFilterContext {};
-            let raw_scorer = vector_holder.get_raw_scorer(query);
+            let raw_scorer = vector_holder.get_raw_scorer(query).unwrap();
 
             let mut reference_top = FixedLengthPriorityQueue::<ScoredPointOffset>::new(top);
             for idx in 0..vector_holder.vectors.len() as PointOffsetType {
@@ -383,12 +395,12 @@ mod tests {
             let brute_top = reference_top.into_vec();
 
             let scorer = FilteredScorer::new(raw_scorer.as_ref(), Some(&fake_filter_context));
-            let graph_search_1 = graph_1.search(top, ef, scorer);
+            let graph_search_1 = graph_1.search(top, ef, scorer, None);
             let sames_1 = sames_count(&brute_top, &graph_search_1);
             total_sames_1 += sames_1;
 
             let scorer = FilteredScorer::new(raw_scorer.as_ref(), Some(&fake_filter_context));
-            let graph_search_2 = graph_2.search(top, ef, scorer);
+            let graph_search_2 = graph_2.search(top, ef, scorer, None);
             let sames_2 = sames_count(&brute_top, &graph_search_2);
             total_sames_2 += sames_2;
         }

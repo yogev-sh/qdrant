@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::types::PointOffsetType;
+use common::types::PointOffsetType;
 
 #[repr(C)]
 struct GpuBuilderContextParamsBuffer {
@@ -99,7 +99,7 @@ impl GpuBuilderContext {
         let staging_buffer = Arc::new(gpu::Buffer::new(
             self.device.clone(),
             gpu::BufferType::CpuToGpu,
-            entries.len() * std::mem::size_of::<PointOffsetType>(),
+            std::mem::size_of_val(entries),
         ));
         staging_buffer.upload_slice(entries, 0);
         gpu_context.copy_gpu_buffer(
@@ -107,7 +107,7 @@ impl GpuBuilderContext {
             self.requests_buffer.clone(),
             0,
             0,
-            entries.len() * std::mem::size_of::<PointOffsetType>(),
+            std::mem::size_of_val(entries),
         );
         gpu_context.run();
         gpu_context.wait_finish();
@@ -119,7 +119,7 @@ impl GpuBuilderContext {
         update_entry_points: &[PointOffsetType],
         link_points: &[PointOffsetType],
     ) {
-        if link_points.len() > 0 {
+        if !link_points.is_empty() {
             self.generation += 1;
             self.link_points_staging_buffer.upload(&self.generation, 0);
             self.link_points_staging_buffer
@@ -129,7 +129,7 @@ impl GpuBuilderContext {
                 self.link_points_buffer.clone(),
                 std::mem::size_of::<u32>(),
                 0,
-                link_points.len() * std::mem::size_of::<PointOffsetType>(),
+                std::mem::size_of_val(link_points),
             );
             gpu_context.copy_gpu_buffer(
                 self.link_points_staging_buffer.clone(),
@@ -139,7 +139,7 @@ impl GpuBuilderContext {
                 std::mem::size_of::<u32>(),
             );
         }
-        if update_entry_points.len() > 0 {
+        if !update_entry_points.is_empty() {
             self.update_entry_points_staging_buffer
                 .upload_slice(update_entry_points, 0);
             gpu_context.copy_gpu_buffer(
@@ -147,7 +147,7 @@ impl GpuBuilderContext {
                 self.update_entry_points_buffer.clone(),
                 0,
                 0,
-                update_entry_points.len() * std::mem::size_of::<PointOffsetType>(),
+                std::mem::size_of_val(update_entry_points),
             );
         }
         gpu_context.run();
@@ -174,7 +174,7 @@ mod tests {
     use crate::index::hnsw_index::graph_layers_builder::GraphLayersBuilder;
     use crate::index::hnsw_index::point_scorer::FilteredScorer;
     use crate::spaces::simple::CosineMetric;
-    use crate::types::{Distance, PointOffsetType};
+    use crate::types::Distance;
     use crate::vector_storage::simple_vector_storage::open_simple_vector_storage;
     use crate::vector_storage::VectorStorage;
 
@@ -209,7 +209,7 @@ mod tests {
         for idx in 0..(num_vectors as PointOffsetType) {
             let fake_filter_context = FakeFilterContext {};
             let added_vector = vector_holder.vectors.get(idx).to_vec();
-            let raw_scorer = vector_holder.get_raw_scorer(added_vector.clone());
+            let raw_scorer = vector_holder.get_raw_scorer(added_vector.clone()).unwrap();
 
             let scorer = FilteredScorer::new(raw_scorer.as_ref(), Some(&fake_filter_context));
             graph_layers_builder.set_levels(idx, point_levels[idx as usize]);
@@ -229,7 +229,7 @@ mod tests {
             let mut borrowed_storage = storage.borrow_mut();
             for idx in 0..(num_vectors as PointOffsetType) {
                 borrowed_storage
-                    .insert_vector(idx, vector_holder.vectors.get(idx))
+                    .insert_vector(idx, vector_holder.vectors.get(idx).into())
                     .unwrap();
             }
         }
@@ -358,7 +358,7 @@ mod tests {
             for i in 0..num_vectors {
                 if point_levels[i] >= level {
                     let links_cpu = graph_layers_builder.links_layers[i][level].read().clone();
-                    let links_gpu = gpu_links.get_links(i as PointOffsetType).clone();
+                    let links_gpu = gpu_links.get_links(i as PointOffsetType);
 
                     println!("{}: {:?} vs {:?}", i, links_gpu, links_cpu);
                     assert_eq!(links_cpu, links_gpu);

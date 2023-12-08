@@ -40,7 +40,7 @@ pub struct GraphLayersBuilder {
     pub visited_pool: VisitedPool,
 
     // List of bool flags, which defines if the point is already indexed or not
-    ready_list: RwLock<BitVec>,
+    pub ready_list: RwLock<BitVec>,
 }
 
 impl GraphLayersBase for GraphLayersBuilder {

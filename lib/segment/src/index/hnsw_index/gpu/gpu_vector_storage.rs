@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
-use crate::entry::entry_point::OperationResult;
-use crate::types::PointOffsetType;
+use common::types::PointOffsetType;
+
+use crate::common::operation_error::OperationResult;
+use crate::data_types::vectors::VectorElementType;
 use crate::vector_storage::{VectorStorage, VectorStorageEnum};
 
 pub const ALIGNMENT: usize = 16;
@@ -79,7 +81,7 @@ impl GpuVectorStorage {
         upload_context.run();
         upload_context.wait_finish();
 
-        for storage_index in 0..STORAGES_COUNT {
+        for (storage_index, vector_buffer) in vectors_buffer.iter().enumerate() {
             let mut gpu_offset = 0;
             let mut upload_size = 0;
             let mut upload_points = 0;
@@ -90,6 +92,7 @@ impl GpuVectorStorage {
                 }
 
                 let vector = vector_storage.get_vector(point_id as PointOffsetType);
+                let vector: &[VectorElementType] = vector.as_vec_ref().try_into()?;
                 extended_vector[..vector.len()].copy_from_slice(vector);
                 staging_buffer.upload_slice(
                     &extended_vector,
@@ -101,7 +104,7 @@ impl GpuVectorStorage {
                 if upload_points == upload_points_count {
                     upload_context.copy_gpu_buffer(
                         staging_buffer.clone(),
-                        vectors_buffer[storage_index].clone(),
+                        vector_buffer.clone(),
                         0,
                         gpu_offset,
                         upload_size,
@@ -123,7 +126,7 @@ impl GpuVectorStorage {
             if upload_points > 0 {
                 upload_context.copy_gpu_buffer(
                     staging_buffer.clone(),
-                    vectors_buffer[storage_index].clone(),
+                    vector_buffer.clone(),
                     0,
                     gpu_offset,
                     upload_size,
@@ -156,9 +159,9 @@ impl GpuVectorStorage {
 
         let mut descriptor_set_builder = gpu::DescriptorSet::builder(descriptor_set_layout.clone())
             .add_uniform_buffer(0, params_buffer.clone());
-        for i in 0..STORAGES_COUNT {
+        for (i, vector_buffer) in vectors_buffer.iter().enumerate() {
             descriptor_set_builder =
-                descriptor_set_builder.add_storage_buffer(i + 1, vectors_buffer[i].clone());
+                descriptor_set_builder.add_storage_buffer(i + 1, vector_buffer.clone());
         }
 
         let descriptor_set = descriptor_set_builder.build();
@@ -193,7 +196,7 @@ mod tests {
     use crate::fixtures::index_fixtures::random_vector;
     use crate::spaces::metric::Metric;
     use crate::spaces::simple::DotProductMetric;
-    use crate::types::{Distance, PointOffsetType};
+    use crate::types::Distance;
     use crate::vector_storage::simple_vector_storage::open_simple_vector_storage;
 
     #[test]
@@ -215,7 +218,7 @@ mod tests {
             let mut borrowed_storage = storage.borrow_mut();
             points.iter().enumerate().for_each(|(i, vec)| {
                 borrowed_storage
-                    .insert_vector(i as PointOffsetType, vec)
+                    .insert_vector(i as PointOffsetType, vec.into())
                     .unwrap();
             });
         }

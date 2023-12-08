@@ -23,7 +23,6 @@ use crate::data_types::vectors::{QueryVector, Vector, VectorRef};
 use crate::id_tracker::{IdTracker, IdTrackerSS};
 use crate::index::hnsw_index::build_condition_checker::BuildConditionChecker;
 use crate::index::hnsw_index::config::HnswGraphConfig;
-use crate::index::hnsw_index::gpu::combined_graph_builder::CombinedGraphBuilder;
 use crate::index::hnsw_index::gpu::get_gpu_indexing;
 use crate::index::hnsw_index::graph_layers::GraphLayers;
 use crate::index::hnsw_index::graph_layers_builder::GraphLayersBuilder;
@@ -54,9 +53,6 @@ const HNSW_USE_HEURISTIC: bool = true;
 const SINGLE_THREADED_HNSW_BUILD_THRESHOLD: usize = 32;
 #[cfg(not(debug_assertions))]
 const SINGLE_THREADED_HNSW_BUILD_THRESHOLD: usize = 256;
-const BYTES_IN_KB: usize = 1024;
-
-const GPU_THREADS_COUNT: usize = 1024;
 
 pub struct HNSWIndex<TGraphLinks: GraphLinks> {
     id_tracker: Arc<AtomicRefCell<IdTrackerSS>>,
@@ -677,6 +673,7 @@ impl<TGraphLinks: GraphLinks> VectorIndex for HNSWIndex<TGraphLinks> {
         let mut indexed_vectors = 0;
 
         if self.config.m > 0 {
+            let timer = std::time::Instant::now();
             let mut ids_iterator = id_tracker.iter_ids_excluding(deleted_bitslice);
 
             let first_few_ids: Vec<_> = ids_iterator
