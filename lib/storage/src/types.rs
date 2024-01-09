@@ -33,7 +33,7 @@ pub struct PerformanceConfig {
     /// If negative - subtract this relative number of CPUs from the available CPUs.
     /// If positive - use this absolute number of CPUs.
     #[serde(default)]
-    pub cpu_budget: isize,
+    pub optimizer_cpu_budget: isize,
 }
 
 /// Global configuration of the storage, loaded on the service launch, default stored in ./config
