@@ -872,6 +872,27 @@ impl TryFrom<api::grpc::qdrant::UpdateResult> for UpdateResult {
                 }
                 _ => return Err(Status::invalid_argument("Malformed UpdateStatus type")),
             },
+            clock_tick: None,
+        })
+    }
+}
+
+impl TryFrom<api::grpc::qdrant::UpdateResultInternal> for UpdateResult {
+    type Error = Status;
+
+    fn try_from(value: api::grpc::qdrant::UpdateResultInternal) -> Result<Self, Self::Error> {
+        Ok(Self {
+            operation_id: value.operation_id,
+            status: match value.status {
+                status if status == api::grpc::qdrant::UpdateStatus::Acknowledged as i32 => {
+                    UpdateStatus::Acknowledged
+                }
+                status if status == api::grpc::qdrant::UpdateStatus::Completed as i32 => {
+                    UpdateStatus::Completed
+                }
+                _ => return Err(Status::invalid_argument("Malformed UpdateStatus type")),
+            },
+            clock_tick: value.clock_tick,
         })
     }
 }

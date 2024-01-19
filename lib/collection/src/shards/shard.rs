@@ -16,6 +16,8 @@ pub type ShardId = u32;
 
 pub type PeerId = u64;
 
+pub type ClockTick = u64;
+
 /// List of peers that should be used to place replicas of a shard
 pub type ShardReplicasPlacement = Vec<PeerId>;
 

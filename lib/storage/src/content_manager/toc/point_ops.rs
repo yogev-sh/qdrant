@@ -276,6 +276,7 @@ impl TableOfContent {
         wait: bool,
         ordering: WriteOrdering,
         shard_selector: ShardSelectorInternal,
+        // ToDo[vector-clock]: Add clock_tick and peer_id as propagated arguments
     ) -> Result<UpdateResult, StorageError> {
         let collection = self.get_collection(collection_name).await?;
 
@@ -287,18 +288,21 @@ impl TableOfContent {
         //  │ Shard: None
         //  │ Ordering: Strong
         //  │ ShardKey: Some("cats")
+        //  │ ClockSync: None
         // ┌▼──────────────────┐
         // │ First Node        │ <- update_from_client
         // └┬──────────────────┘
         //  │ Shard: Some(N)
         //  │ Ordering: Strong
         //  │ ShardKey: None
+        //  │ ClockSync: None
         // ┌▼──────────────────┐
         // │ Leader node       │ <- update_from_peer
         // └┬──────────────────┘
         //  │ Shard: Some(N)
         //  │ Ordering: None(Weak)
         //  │ ShardKey: None
+        //  │ ClockSync: { peer_id: IdOf(Leader node), clock_tick: 123 }
         // ┌▼──────────────────┐
         // │ Updating node     │ <- update_from_peer
         // └───────────────────┘

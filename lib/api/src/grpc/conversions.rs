@@ -9,7 +9,10 @@ use segment::types::default_quantization_ignore_value;
 use tonic::Status;
 use uuid::Uuid;
 
-use super::qdrant::{BinaryQuantization, CompressionRatio, GeoLineString, GroupId, SparseIndices};
+use super::qdrant::{
+    BinaryQuantization, CompressionRatio, GeoLineString, GroupId, PointsOperationResponse,
+    PointsOperationResponseInternal, SparseIndices, UpdateResult, UpdateResultInternal,
+};
 use crate::grpc::models::{CollectionsResponse, VersionInfo};
 use crate::grpc::qdrant::condition::ConditionOneOf;
 use crate::grpc::qdrant::payload_index_params::IndexParams;
@@ -1271,4 +1274,23 @@ pub fn into_named_vector_struct(
             }
         }
     })
+}
+
+impl From<UpdateResultInternal> for UpdateResult {
+    fn from(value: UpdateResultInternal) -> Self {
+        Self {
+            operation_id: value.operation_id,
+            status: value.status,
+        }
+    }
+}
+
+impl From<PointsOperationResponseInternal> for PointsOperationResponse {
+    fn from(value: PointsOperationResponseInternal) -> Self {
+        let update_result = value.result.map(UpdateResult::from);
+        Self {
+            result: update_result,
+            time: value.time,
+        }
+    }
 }

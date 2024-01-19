@@ -137,11 +137,13 @@ impl ShardOperation for LocalShard {
             Ok(UpdateResult {
                 operation_id: Some(operation_id),
                 status: UpdateStatus::Completed,
+                clock_tick: None, // ToDo[vector-clock]: Add clock_tick
             })
         } else {
             Ok(UpdateResult {
                 operation_id: Some(operation_id),
                 status: UpdateStatus::Acknowledged,
+                clock_tick: None, // ToDo[vector-clock]: Add clock_tick
             })
         }
     }

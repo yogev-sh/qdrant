@@ -6909,6 +6909,29 @@ pub mod points_server {
     }
 }
 #[derive(serde::Serialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct UpdateResultInternal {
+    /// Number of operation
+    #[prost(uint64, optional, tag = "1")]
+    pub operation_id: ::core::option::Option<u64>,
+    /// Operation status
+    #[prost(enumeration = "UpdateStatus", tag = "2")]
+    pub status: i32,
+    #[prost(uint64, optional, tag = "3")]
+    pub clock_tick: ::core::option::Option<u64>,
+}
+#[derive(serde::Serialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PointsOperationResponseInternal {
+    #[prost(message, optional, tag = "1")]
+    pub result: ::core::option::Option<UpdateResultInternal>,
+    /// Time spent to process
+    #[prost(double, tag = "2")]
+    pub time: f64,
+}
+#[derive(serde::Serialize)]
 #[derive(validator::Validate)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -6932,6 +6955,15 @@ pub struct SyncPoints {
     pub ordering: ::core::option::Option<WriteOrdering>,
 }
 #[derive(serde::Serialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ClockSync {
+    #[prost(uint64, tag = "1")]
+    pub value: u64,
+    #[prost(uint64, tag = "2")]
+    pub peer_id: u64,
+}
+#[derive(serde::Serialize)]
 #[derive(validator::Validate)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -6941,6 +6973,8 @@ pub struct SyncPointsInternal {
     pub sync_points: ::core::option::Option<SyncPoints>,
     #[prost(uint32, optional, tag = "2")]
     pub shard_id: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "3")]
+    pub clock: ::core::option::Option<ClockSync>,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]
@@ -6952,6 +6986,8 @@ pub struct UpsertPointsInternal {
     pub upsert_points: ::core::option::Option<UpsertPoints>,
     #[prost(uint32, optional, tag = "2")]
     pub shard_id: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "3")]
+    pub clock: ::core::option::Option<ClockSync>,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]
@@ -6963,6 +6999,8 @@ pub struct DeletePointsInternal {
     pub delete_points: ::core::option::Option<DeletePoints>,
     #[prost(uint32, optional, tag = "2")]
     pub shard_id: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "3")]
+    pub clock: ::core::option::Option<ClockSync>,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]
@@ -6974,6 +7012,8 @@ pub struct UpdateVectorsInternal {
     pub update_vectors: ::core::option::Option<UpdatePointVectors>,
     #[prost(uint32, optional, tag = "2")]
     pub shard_id: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "3")]
+    pub clock: ::core::option::Option<ClockSync>,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]
@@ -6985,6 +7025,8 @@ pub struct DeleteVectorsInternal {
     pub delete_vectors: ::core::option::Option<DeletePointVectors>,
     #[prost(uint32, optional, tag = "2")]
     pub shard_id: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "3")]
+    pub clock: ::core::option::Option<ClockSync>,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]
@@ -6996,6 +7038,8 @@ pub struct SetPayloadPointsInternal {
     pub set_payload_points: ::core::option::Option<SetPayloadPoints>,
     #[prost(uint32, optional, tag = "2")]
     pub shard_id: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "3")]
+    pub clock: ::core::option::Option<ClockSync>,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]
@@ -7007,6 +7051,8 @@ pub struct DeletePayloadPointsInternal {
     pub delete_payload_points: ::core::option::Option<DeletePayloadPoints>,
     #[prost(uint32, optional, tag = "2")]
     pub shard_id: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "3")]
+    pub clock: ::core::option::Option<ClockSync>,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]
@@ -7018,6 +7064,8 @@ pub struct ClearPayloadPointsInternal {
     pub clear_payload_points: ::core::option::Option<ClearPayloadPoints>,
     #[prost(uint32, optional, tag = "2")]
     pub shard_id: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "3")]
+    pub clock: ::core::option::Option<ClockSync>,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]
@@ -7031,6 +7079,8 @@ pub struct CreateFieldIndexCollectionInternal {
     >,
     #[prost(uint32, optional, tag = "2")]
     pub shard_id: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "3")]
+    pub clock: ::core::option::Option<ClockSync>,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]
@@ -7044,6 +7094,8 @@ pub struct DeleteFieldIndexCollectionInternal {
     >,
     #[prost(uint32, optional, tag = "2")]
     pub shard_id: ::core::option::Option<u32>,
+    #[prost(message, optional, tag = "3")]
+    pub clock: ::core::option::Option<ClockSync>,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]
@@ -7326,7 +7378,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::UpsertPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7351,7 +7403,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::SyncPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7376,7 +7428,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::DeletePointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7401,7 +7453,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::UpdateVectorsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7426,7 +7478,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::DeleteVectorsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7451,7 +7503,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::SetPayloadPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7476,7 +7528,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::SetPayloadPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7501,7 +7553,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::DeletePayloadPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7526,7 +7578,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::ClearPayloadPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7551,7 +7603,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::CreateFieldIndexCollectionInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7576,7 +7628,7 @@ pub mod points_internal_client {
             &mut self,
             request: impl tonic::IntoRequest<super::DeleteFieldIndexCollectionInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         > {
             self.inner
@@ -7772,77 +7824,77 @@ pub mod points_internal_server {
             &self,
             request: tonic::Request<super::UpsertPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn sync(
             &self,
             request: tonic::Request<super::SyncPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn delete(
             &self,
             request: tonic::Request<super::DeletePointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn update_vectors(
             &self,
             request: tonic::Request<super::UpdateVectorsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn delete_vectors(
             &self,
             request: tonic::Request<super::DeleteVectorsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn set_payload(
             &self,
             request: tonic::Request<super::SetPayloadPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn overwrite_payload(
             &self,
             request: tonic::Request<super::SetPayloadPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn delete_payload(
             &self,
             request: tonic::Request<super::DeletePayloadPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn clear_payload(
             &self,
             request: tonic::Request<super::ClearPayloadPointsInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn create_field_index(
             &self,
             request: tonic::Request<super::CreateFieldIndexCollectionInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn delete_field_index(
             &self,
             request: tonic::Request<super::DeleteFieldIndexCollectionInternal>,
         ) -> std::result::Result<
-            tonic::Response<super::PointsOperationResponse>,
+            tonic::Response<super::PointsOperationResponseInternal>,
             tonic::Status,
         >;
         async fn search(
@@ -7969,7 +8021,7 @@ pub mod points_internal_server {
                         T: PointsInternal,
                     > tonic::server::UnaryService<super::UpsertPointsInternal>
                     for UpsertSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -8015,7 +8067,7 @@ pub mod points_internal_server {
                         T: PointsInternal,
                     > tonic::server::UnaryService<super::SyncPointsInternal>
                     for SyncSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -8061,7 +8113,7 @@ pub mod points_internal_server {
                         T: PointsInternal,
                     > tonic::server::UnaryService<super::DeletePointsInternal>
                     for DeleteSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -8107,7 +8159,7 @@ pub mod points_internal_server {
                         T: PointsInternal,
                     > tonic::server::UnaryService<super::UpdateVectorsInternal>
                     for UpdateVectorsSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -8153,7 +8205,7 @@ pub mod points_internal_server {
                         T: PointsInternal,
                     > tonic::server::UnaryService<super::DeleteVectorsInternal>
                     for DeleteVectorsSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -8199,7 +8251,7 @@ pub mod points_internal_server {
                         T: PointsInternal,
                     > tonic::server::UnaryService<super::SetPayloadPointsInternal>
                     for SetPayloadSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -8245,7 +8297,7 @@ pub mod points_internal_server {
                         T: PointsInternal,
                     > tonic::server::UnaryService<super::SetPayloadPointsInternal>
                     for OverwritePayloadSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -8292,7 +8344,7 @@ pub mod points_internal_server {
                         T: PointsInternal,
                     > tonic::server::UnaryService<super::DeletePayloadPointsInternal>
                     for DeletePayloadSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -8338,7 +8390,7 @@ pub mod points_internal_server {
                         T: PointsInternal,
                     > tonic::server::UnaryService<super::ClearPayloadPointsInternal>
                     for ClearPayloadSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -8385,7 +8437,7 @@ pub mod points_internal_server {
                     > tonic::server::UnaryService<
                         super::CreateFieldIndexCollectionInternal,
                     > for CreateFieldIndexSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -8435,7 +8487,7 @@ pub mod points_internal_server {
                     > tonic::server::UnaryService<
                         super::DeleteFieldIndexCollectionInternal,
                     > for DeleteFieldIndexSvc<T> {
-                        type Response = super::PointsOperationResponse;
+                        type Response = super::PointsOperationResponseInternal;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,

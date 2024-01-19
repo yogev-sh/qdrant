@@ -6,17 +6,17 @@ package qdrant;
 option csharp_namespace = "Qdrant.Client.Grpc";
 
 service PointsInternal {
-  rpc Upsert (UpsertPointsInternal) returns (PointsOperationResponse) {}
-  rpc Sync (SyncPointsInternal) returns (PointsOperationResponse) {}
-  rpc Delete (DeletePointsInternal) returns (PointsOperationResponse) {}
-  rpc UpdateVectors (UpdateVectorsInternal) returns (PointsOperationResponse) {}
-  rpc DeleteVectors (DeleteVectorsInternal) returns (PointsOperationResponse) {}
-  rpc SetPayload (SetPayloadPointsInternal) returns (PointsOperationResponse) {}
-  rpc OverwritePayload (SetPayloadPointsInternal) returns (PointsOperationResponse) {}
-  rpc DeletePayload (DeletePayloadPointsInternal) returns (PointsOperationResponse) {}
-  rpc ClearPayload (ClearPayloadPointsInternal) returns (PointsOperationResponse) {}
-  rpc CreateFieldIndex (CreateFieldIndexCollectionInternal) returns (PointsOperationResponse) {}
-  rpc DeleteFieldIndex (DeleteFieldIndexCollectionInternal) returns (PointsOperationResponse) {}
+  rpc Upsert (UpsertPointsInternal) returns (PointsOperationResponseInternal) {}
+  rpc Sync (SyncPointsInternal) returns (PointsOperationResponseInternal) {}
+  rpc Delete (DeletePointsInternal) returns (PointsOperationResponseInternal) {}
+  rpc UpdateVectors (UpdateVectorsInternal) returns (PointsOperationResponseInternal) {}
+  rpc DeleteVectors (DeleteVectorsInternal) returns (PointsOperationResponseInternal) {}
+  rpc SetPayload (SetPayloadPointsInternal) returns (PointsOperationResponseInternal) {}
+  rpc OverwritePayload (SetPayloadPointsInternal) returns (PointsOperationResponseInternal) {}
+  rpc DeletePayload (DeletePayloadPointsInternal) returns (PointsOperationResponseInternal) {}
+  rpc ClearPayload (ClearPayloadPointsInternal) returns (PointsOperationResponseInternal) {}
+  rpc CreateFieldIndex (CreateFieldIndexCollectionInternal) returns (PointsOperationResponseInternal) {}
+  rpc DeleteFieldIndex (DeleteFieldIndexCollectionInternal) returns (PointsOperationResponseInternal) {}
   rpc Search (SearchPointsInternal) returns (SearchResponse) {}
   rpc SearchBatch (SearchBatchPointsInternal) returns (SearchBatchResponse) {}
   rpc CoreSearchBatch (CoreSearchBatchPointsInternal) returns (SearchBatchResponse) {}
@@ -26,6 +26,16 @@ service PointsInternal {
   rpc Get (GetPointsInternal) returns (GetResponse) {}
 }
 
+message UpdateResultInternal {
+  optional uint64 operation_id = 1; // Number of operation
+  UpdateStatus status = 2; // Operation status
+  optional uint64 clock_tick = 3;
+}
+
+message PointsOperationResponseInternal {
+  UpdateResultInternal result = 1;
+  double time = 2; // Time spent to process
+}
 
 message SyncPoints {
   string collection_name = 1; // name of the collection
@@ -36,54 +46,69 @@ message SyncPoints {
   optional WriteOrdering ordering = 6;
 }
 
+message ClockSync {
+  uint64 value = 1;
+  uint64 peer_id = 2;
+}
+
 message SyncPointsInternal {
   SyncPoints sync_points = 1;
   optional uint32 shard_id = 2;
+  optional ClockSync clock = 3;
 }
 
 message UpsertPointsInternal {
   UpsertPoints upsert_points = 1;
   optional uint32 shard_id = 2;
+  optional ClockSync clock = 3;
 }
 
 message DeletePointsInternal {
   DeletePoints delete_points = 1;
   optional uint32 shard_id = 2;
+  optional ClockSync clock = 3;
 }
 
 message UpdateVectorsInternal {
   UpdatePointVectors update_vectors = 1;
   optional uint32 shard_id = 2;
+  optional ClockSync clock = 3;
 }
 
 message DeleteVectorsInternal {
   DeletePointVectors delete_vectors = 1;
   optional uint32 shard_id = 2;
+  optional ClockSync clock = 3;
 }
 
 message SetPayloadPointsInternal {
   SetPayloadPoints set_payload_points = 1;
   optional uint32 shard_id = 2;
+  optional ClockSync clock = 3;
 }
 
 message DeletePayloadPointsInternal {
   DeletePayloadPoints delete_payload_points = 1;
   optional uint32 shard_id = 2;
+  optional ClockSync clock = 3;
 }
 
 message ClearPayloadPointsInternal {
   ClearPayloadPoints clear_payload_points = 1;
   optional uint32 shard_id = 2;
+  optional ClockSync clock = 3;
 }
 
 message CreateFieldIndexCollectionInternal {
   CreateFieldIndexCollection create_field_index_collection = 1;
   optional uint32 shard_id = 2;
+  optional ClockSync clock = 3;
 }
 
 message DeleteFieldIndexCollectionInternal {
   DeleteFieldIndexCollection delete_field_index_collection = 1;
   optional uint32 shard_id = 2;
+  optional ClockSync clock = 3;
 }
 
 message SearchPointsInternal {

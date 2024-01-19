@@ -7,12 +7,12 @@ use api::grpc::qdrant::{
     points_update_operation, BatchResult, ClearPayloadPoints, CoreSearchPoints, CountPoints,
     CountResponse, CreateFieldIndexCollection, DeleteFieldIndexCollection, DeletePayloadPoints,
     DeletePointVectors, DeletePoints, DiscoverBatchResponse, DiscoverPoints, DiscoverResponse,
-    FieldType, GetPoints, GetResponse, PayloadIndexParams, PointsOperationResponse, PointsSelector,
-    ReadConsistency as ReadConsistencyGrpc, RecommendBatchResponse, RecommendGroupsResponse,
-    RecommendPointGroups, RecommendPoints, RecommendResponse, ScrollPoints, ScrollResponse,
-    SearchBatchResponse, SearchGroupsResponse, SearchPointGroups, SearchPoints, SearchResponse,
-    SetPayloadPoints, SyncPoints, UpdateBatchPoints, UpdateBatchResponse, UpdatePointVectors,
-    UpsertPoints,
+    FieldType, GetPoints, GetResponse, PayloadIndexParams, PointsOperationResponseInternal,
+    PointsSelector, ReadConsistency as ReadConsistencyGrpc, RecommendBatchResponse,
+    RecommendGroupsResponse, RecommendPointGroups, RecommendPoints, RecommendResponse,
+    ScrollPoints, ScrollResponse, SearchBatchResponse, SearchGroupsResponse, SearchPointGroups,
+    SearchPoints, SearchResponse, SetPayloadPoints, SyncPoints, UpdateBatchPoints,
+    UpdateBatchResponse, UpdatePointVectors, UpdateResult, UpdateResultInternal, UpsertPoints,
 };
 use collection::operations::consistency_params::ReadConsistency;
 use collection::operations::conversions::{
@@ -64,9 +64,20 @@ fn extract_points_selector(
 pub fn points_operation_response(
     timing: Instant,
     update_result: collection::operations::types::UpdateResult,
-) -> PointsOperationResponse {
-    PointsOperationResponse {
-        result: Some(update_result.into()),
+) -> PointsOperationResponseInternal {
+    let clock_tick = update_result.clock_tick;
+
+    let api::grpc::qdrant::UpdateResult {
+        operation_id,
+        status,
+    } = api::grpc::qdrant::UpdateResult::from(update_result);
+
+    PointsOperationResponseInternal {
+        result: Some(UpdateResultInternal {
+            operation_id,
+            status,
+            clock_tick,
+        }),
         time: timing.elapsed().as_secs_f64(),
     }
 }
@@ -93,7 +104,7 @@ pub async fn upsert(
     toc: &TableOfContent,
     upsert_points: UpsertPoints,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let UpsertPoints {
         collection_name,
         wait,
@@ -129,7 +140,7 @@ pub async fn sync(
     toc: &TableOfContent,
     sync_points: SyncPoints,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let SyncPoints {
         collection_name,
         wait,
@@ -180,7 +191,7 @@ pub async fn delete(
     toc: &TableOfContent,
     delete_points: DeletePoints,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let DeletePoints {
         collection_name,
         wait,
@@ -214,7 +225,7 @@ pub async fn update_vectors(
     toc: &TableOfContent,
     update_point_vectors: UpdatePointVectors,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let UpdatePointVectors {
         collection_name,
         wait,
@@ -262,7 +273,7 @@ pub async fn delete_vectors(
     toc: &TableOfContent,
     delete_point_vectors: DeletePointVectors,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let DeletePointVectors {
         collection_name,
         wait,
@@ -305,7 +316,7 @@ pub async fn set_payload(
     toc: &TableOfContent,
     set_payload_points: SetPayloadPoints,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let SetPayloadPoints {
         collection_name,
         wait,
@@ -343,7 +354,7 @@ pub async fn overwrite_payload(
     toc: &TableOfContent,
     set_payload_points: SetPayloadPoints,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let SetPayloadPoints {
         collection_name,
         wait,
@@ -381,7 +392,7 @@ pub async fn delete_payload(
     toc: &TableOfContent,
     delete_payload_points: DeletePayloadPoints,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let DeletePayloadPoints {
         collection_name,
         wait,
@@ -419,7 +430,7 @@ pub async fn clear_payload(
     toc: &TableOfContent,
     clear_payload_points: ClearPayloadPoints,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let ClearPayloadPoints {
         collection_name,
         wait,
@@ -658,7 +669,7 @@ pub async fn update_batch(
     Ok(Response::new(UpdateBatchResponse {
         result: results
             .into_iter()
-            .map(|response| response.into_inner().result.unwrap())
+            .map(|response| UpdateResult::from(response.into_inner().result.unwrap()))
             .collect(),
         time: timing.elapsed().as_secs_f64(),
     }))
@@ -722,7 +733,7 @@ pub async fn create_field_index(
     toc: &Dispatcher,
     create_field_index_collection: CreateFieldIndexCollection,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let CreateFieldIndexCollection {
         collection_name,
         wait,
@@ -759,7 +770,7 @@ pub async fn create_field_index_internal(
     toc: &TableOfContent,
     create_field_index_collection: CreateFieldIndexCollection,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let CreateFieldIndexCollection {
         collection_name,
         wait,
@@ -792,7 +803,7 @@ pub async fn delete_field_index(
     toc: &Dispatcher,
     delete_field_index_collection: DeleteFieldIndexCollection,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let DeleteFieldIndexCollection {
         collection_name,
         wait,
@@ -820,7 +831,7 @@ pub async fn delete_field_index_internal(
     toc: &TableOfContent,
     delete_field_index_collection: DeleteFieldIndexCollection,
     shard_selection: Option<ShardId>,
-) -> Result<Response<PointsOperationResponse>, Status> {
+) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let DeleteFieldIndexCollection {
         collection_name,
         wait,

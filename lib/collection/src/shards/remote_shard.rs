@@ -1,5 +1,6 @@
 use std::future::Future;
 use std::path::Path;
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -71,6 +72,7 @@ pub struct RemoteShard {
     pub channel_service: ChannelService,
     telemetry_search_durations: Arc<Mutex<OperationDurationsAggregator>>,
     telemetry_update_durations: Arc<Mutex<OperationDurationsAggregator>>,
+    clock_tick: Arc<AtomicU64>,
 }
 
 impl RemoteShard {
@@ -88,6 +90,7 @@ impl RemoteShard {
             channel_service,
             telemetry_search_durations: OperationDurationsAggregator::new(),
             telemetry_update_durations: OperationDurationsAggregator::new(),
+            clock_tick: Arc::new(AtomicU64::new(0)),
         }
     }
 
@@ -228,6 +231,9 @@ impl RemoteShard {
         let mut timer = ScopeDurationMeasurer::new(&self.telemetry_update_durations);
         timer.set_success(false);
 
+        let clock_tick = self.clock_tick.load(std::sync::atomic::Ordering::Relaxed);
+        let peer_id = self.peer_id;
+
         let point_operation_response = match operation {
             CollectionUpdateOperations::PointOperation(point_ops) => match point_ops {
                 PointOperations::UpsertPoints(point_insert_operations) => {
@@ -237,6 +243,8 @@ impl RemoteShard {
                         point_insert_operations,
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     )?;
                     self.with_points_client(|mut client| async move {
                         client.upsert(tonic::Request::new(request.clone())).await
@@ -245,8 +253,15 @@ impl RemoteShard {
                     .into_inner()
                 }
                 PointOperations::DeletePoints { ids } => {
-                    let request =
-                        &internal_delete_points(shard_id, collection_name, ids, wait, ordering);
+                    let request = &internal_delete_points(
+                        shard_id,
+                        collection_name,
+                        ids,
+                        wait,
+                        ordering,
+                        peer_id,
+                        clock_tick,
+                    );
                     self.with_points_client(|mut client| async move {
                         client.delete(tonic::Request::new(request.clone())).await
                     })
@@ -260,6 +275,8 @@ impl RemoteShard {
                         filter,
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     );
                     self.with_points_client(|mut client| async move {
                         client.delete(tonic::Request::new(request.clone())).await
@@ -274,6 +291,8 @@ impl RemoteShard {
                         operation,
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     )?;
                     self.with_points_client(|mut client| async move {
                         client.sync(tonic::Request::new(request.clone())).await
@@ -290,6 +309,8 @@ impl RemoteShard {
                         update_operation,
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     );
                     self.with_points_client(|mut client| async move {
                         client
@@ -307,6 +328,8 @@ impl RemoteShard {
                         vector_names.clone(),
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     );
                     self.with_points_client(|mut client| async move {
                         client
@@ -324,6 +347,8 @@ impl RemoteShard {
                         vector_names.clone(),
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     );
                     self.with_points_client(|mut client| async move {
                         client
@@ -342,6 +367,8 @@ impl RemoteShard {
                         set_payload,
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     );
                     self.with_points_client(|mut client| async move {
                         client
@@ -358,6 +385,8 @@ impl RemoteShard {
                         delete_payload,
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     );
                     self.with_points_client(|mut client| async move {
                         client
@@ -368,8 +397,15 @@ impl RemoteShard {
                     .into_inner()
                 }
                 PayloadOps::ClearPayload { points } => {
-                    let request =
-                        &internal_clear_payload(shard_id, collection_name, points, wait, ordering);
+                    let request = &internal_clear_payload(
+                        shard_id,
+                        collection_name,
+                        points,
+                        wait,
+                        ordering,
+                        peer_id,
+                        clock_tick,
+                    );
                     self.with_points_client(|mut client| async move {
                         client
                             .clear_payload(tonic::Request::new(request.clone()))
@@ -385,6 +421,8 @@ impl RemoteShard {
                         filter,
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     );
                     self.with_points_client(|mut client| async move {
                         client
@@ -401,6 +439,8 @@ impl RemoteShard {
                         set_payload,
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     );
                     self.with_points_client(|mut client| async move {
                         client
@@ -420,6 +460,8 @@ impl RemoteShard {
                         create_index,
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     );
                     self.with_points_client(|mut client| async move {
                         client
@@ -436,6 +478,8 @@ impl RemoteShard {
                         delete_index,
                         wait,
                         ordering,
+                        peer_id,
+                        clock_tick,
                     );
                     self.with_points_client(|mut client| async move {
                         client
@@ -451,7 +495,14 @@ impl RemoteShard {
             None => Err(CollectionError::service_error(
                 "Malformed UpdateResult type".to_string(),
             )),
-            Some(update_result) => update_result.try_into().map_err(|e: Status| e.into()),
+            Some(update_result) => {
+                if let Some(clock_tick) = update_result.clock_tick {
+                    self.clock_tick
+                        .store(clock_tick, std::sync::atomic::Ordering::Relaxed);
+                }
+                crate::operations::types::UpdateResult::try_from(update_result)
+                    .map_err(|e: Status| e.into())
+            }
         }
     }
 

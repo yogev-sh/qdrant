@@ -44,7 +44,7 @@ use crate::operations::config_diff::{HnswConfigDiff, QuantizationConfigDiff};
 use crate::operations::shard_key_selector::ShardKeySelector;
 use crate::save_on_disk;
 use crate::shards::replica_set::ReplicaState;
-use crate::shards::shard::{PeerId, ShardId};
+use crate::shards::shard::{ClockTick, PeerId, ShardId};
 use crate::shards::transfer::ShardTransferMethod;
 use crate::wal::WalError;
 
@@ -251,6 +251,11 @@ pub struct UpdateResult {
     pub operation_id: Option<SeqNumberType>,
     /// Update status
     pub status: UpdateStatus,
+
+    /// Updated value for the external clock tick
+    /// Provided if incoming update request also specify clock tick
+    #[serde(skip)]
+    pub clock_tick: Option<ClockTick>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone)]
