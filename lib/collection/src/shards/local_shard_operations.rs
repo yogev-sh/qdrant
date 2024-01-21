@@ -12,6 +12,7 @@ use tokio::sync::oneshot;
 
 use crate::collection_manager::segments_searcher::SegmentsSearcher;
 use crate::common::stopping_guard::StoppingGuard;
+use crate::operations::clock_sync::ClockSync;
 use crate::operations::types::{
     CollectionError, CollectionInfo, CollectionResult, CoreSearchRequestBatch,
     CountRequestInternal, CountResult, PointRequestInternal, QueryEnum, Record, UpdateResult,
@@ -110,6 +111,7 @@ impl ShardOperation for LocalShard {
         &self,
         operation: CollectionUpdateOperations,
         wait: bool,
+        _clock_sync: Option<ClockSync>,
     ) -> CollectionResult<UpdateResult> {
         let (callback_sender, callback_receiver) = if wait {
             let (tx, rx) = oneshot::channel();
@@ -122,6 +124,8 @@ impl ShardOperation for LocalShard {
             let update_sender = self.update_sender.load();
             let channel_permit = update_sender.reserve().await?;
             let mut wal_lock = self.wal.lock();
+            // ToDo[vector-clock]: Increment clock for a specific shard&thread
+            // ToDo[vector-clock]: Add current clock state to the operation
             let operation_id = wal_lock.write(&operation)?;
             channel_permit.send(UpdateSignal::Operation(OperationData {
                 op_num: operation_id,

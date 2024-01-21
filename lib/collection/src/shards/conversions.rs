@@ -1,8 +1,8 @@
 use api::grpc::conversions::{convert_shard_key_from_grpc_opt, payload_to_proto};
 use api::grpc::qdrant::points_selector::PointsSelectorOneOf;
 use api::grpc::qdrant::{
-    ClearPayloadPoints, ClearPayloadPointsInternal, ClockSync, CreateFieldIndexCollection,
-    CreateFieldIndexCollectionInternal, DeleteFieldIndexCollection,
+    ClearPayloadPoints, ClearPayloadPointsInternal, ClockSync as ClockSyncGrpc,
+    CreateFieldIndexCollection, CreateFieldIndexCollectionInternal, DeleteFieldIndexCollection,
     DeleteFieldIndexCollectionInternal, DeletePayloadPoints, DeletePayloadPointsInternal,
     DeletePointVectors, DeletePoints, DeletePointsInternal, DeleteVectorsInternal, PointVectors,
     PointsIdsList, PointsSelector, SetPayloadPoints, SetPayloadPointsInternal, SyncPoints,
@@ -12,6 +12,7 @@ use api::grpc::qdrant::{
 use segment::types::{Filter, PayloadFieldSchema, PayloadSchemaParams, PointIdType, ScoredPoint};
 use tonic::Status;
 
+use crate::operations::clock_sync::ClockSync;
 use crate::operations::conversions::write_ordering_to_proto;
 use crate::operations::payload_ops::{DeletePayloadOp, SetPayloadOp};
 use crate::operations::point_ops::{
@@ -20,7 +21,6 @@ use crate::operations::point_ops::{
 use crate::operations::types::CollectionResult;
 use crate::operations::vector_ops::UpdateVectorsOp;
 use crate::operations::CreateIndex;
-use crate::shards::shard;
 use crate::shards::shard::ShardId;
 
 pub fn internal_sync_points(
@@ -29,8 +29,7 @@ pub fn internal_sync_points(
     points_sync_operation: PointSyncOperation,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> CollectionResult<SyncPointsInternal> {
     Ok(SyncPointsInternal {
         shard_id,
@@ -46,10 +45,7 @@ pub fn internal_sync_points(
             to_id: points_sync_operation.to_id.map(|x| x.into()),
             ordering: ordering.map(write_ordering_to_proto),
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     })
 }
 
@@ -59,8 +55,7 @@ pub fn internal_upsert_points(
     point_insert_operations: PointInsertOperationsInternal,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> CollectionResult<UpsertPointsInternal> {
     Ok(UpsertPointsInternal {
         shard_id,
@@ -77,10 +72,7 @@ pub fn internal_upsert_points(
             ordering: ordering.map(write_ordering_to_proto),
             shard_key_selector: None,
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     })
 }
 
@@ -90,8 +82,7 @@ pub fn internal_delete_points(
     ids: Vec<PointIdType>,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> DeletePointsInternal {
     DeletePointsInternal {
         shard_id,
@@ -106,10 +97,7 @@ pub fn internal_delete_points(
             ordering: ordering.map(write_ordering_to_proto),
             shard_key_selector: None,
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 
@@ -119,8 +107,7 @@ pub fn internal_delete_points_by_filter(
     filter: Filter,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> DeletePointsInternal {
     DeletePointsInternal {
         shard_id,
@@ -133,10 +120,7 @@ pub fn internal_delete_points_by_filter(
             ordering: ordering.map(write_ordering_to_proto),
             shard_key_selector: None,
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 
@@ -146,8 +130,7 @@ pub fn internal_update_vectors(
     update_vectors: UpdateVectorsOp,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> UpdateVectorsInternal {
     UpdateVectorsInternal {
         shard_id,
@@ -165,10 +148,7 @@ pub fn internal_update_vectors(
             ordering: ordering.map(write_ordering_to_proto),
             shard_key_selector: None,
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 
@@ -180,8 +160,7 @@ pub fn internal_delete_vectors(
     vector_names: Vec<String>,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> DeleteVectorsInternal {
     DeleteVectorsInternal {
         shard_id,
@@ -199,10 +178,7 @@ pub fn internal_delete_vectors(
             ordering: ordering.map(write_ordering_to_proto),
             shard_key_selector: None,
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 
@@ -214,8 +190,7 @@ pub fn internal_delete_vectors_by_filter(
     vector_names: Vec<String>,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> DeleteVectorsInternal {
     DeleteVectorsInternal {
         shard_id,
@@ -231,10 +206,7 @@ pub fn internal_delete_vectors_by_filter(
             ordering: ordering.map(write_ordering_to_proto),
             shard_key_selector: None,
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 
@@ -244,8 +216,7 @@ pub fn internal_set_payload(
     set_payload: SetPayloadOp,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> SetPayloadPointsInternal {
     let points_selector = if let Some(points) = set_payload.points {
         Some(PointsSelector {
@@ -269,10 +240,7 @@ pub fn internal_set_payload(
             ordering: ordering.map(write_ordering_to_proto),
             shard_key_selector: None,
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 
@@ -282,8 +250,7 @@ pub fn internal_delete_payload(
     delete_payload: DeletePayloadOp,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> DeletePayloadPointsInternal {
     let points_selector = if let Some(points) = delete_payload.points {
         Some(PointsSelector {
@@ -307,10 +274,7 @@ pub fn internal_delete_payload(
             ordering: ordering.map(write_ordering_to_proto),
             shard_key_selector: None,
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 
@@ -320,8 +284,7 @@ pub fn internal_clear_payload(
     points: Vec<PointIdType>,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> ClearPayloadPointsInternal {
     ClearPayloadPointsInternal {
         shard_id,
@@ -336,10 +299,7 @@ pub fn internal_clear_payload(
             ordering: ordering.map(write_ordering_to_proto),
             shard_key_selector: None,
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 
@@ -349,8 +309,7 @@ pub fn internal_clear_payload_by_filter(
     filter: Filter,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> ClearPayloadPointsInternal {
     ClearPayloadPointsInternal {
         shard_id,
@@ -363,10 +322,7 @@ pub fn internal_clear_payload_by_filter(
             ordering: ordering.map(write_ordering_to_proto),
             shard_key_selector: None,
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 
@@ -376,8 +332,7 @@ pub fn internal_create_index(
     create_index: CreateIndex,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> CreateFieldIndexCollectionInternal {
     let (field_type, field_index_params) = create_index
         .field_schema
@@ -429,10 +384,7 @@ pub fn internal_create_index(
             field_index_params,
             ordering: ordering.map(write_ordering_to_proto),
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 
@@ -442,8 +394,7 @@ pub fn internal_delete_index(
     delete_index: String,
     wait: bool,
     ordering: Option<WriteOrdering>,
-    peer_id: shard::PeerId,
-    clock_tick: shard::ClockTick,
+    clock_sync: Option<ClockSync>,
 ) -> DeleteFieldIndexCollectionInternal {
     DeleteFieldIndexCollectionInternal {
         shard_id,
@@ -453,10 +404,7 @@ pub fn internal_delete_index(
             field_name: delete_index,
             ordering: ordering.map(write_ordering_to_proto),
         }),
-        clock: Some(ClockSync {
-            value: clock_tick,
-            peer_id,
-        }),
+        clock: clock_sync.map(ClockSyncGrpc::from),
     }
 }
 

@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use collection::common::batching::batch_requests;
+use collection::operations::clock_sync::ClockSync;
 use collection::operations::consistency_params::ReadConsistency;
 use collection::operations::payload_ops::{
     DeletePayload, DeletePayloadOp, PayloadOps, SetPayload, SetPayloadOp,
@@ -160,6 +161,7 @@ pub async fn do_upsert_points(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let (shard_key, operation) = operation.decompose();
     let collection_operation =
@@ -173,6 +175,7 @@ pub async fn do_upsert_points(
         wait,
         ordering,
         shard_selector,
+        clock_sync,
     )
     .await
 }
@@ -184,6 +187,7 @@ pub async fn do_delete_points(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let (point_operation, shard_key) = match points {
         PointsSelector::PointIdsSelector(PointIdsList { points, shard_key }) => {
@@ -202,6 +206,7 @@ pub async fn do_delete_points(
         wait,
         ordering,
         shard_selector,
+        clock_sync,
     )
     .await
 }
@@ -213,6 +218,7 @@ pub async fn do_update_vectors(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let UpdateVectors { points, shard_key } = operation;
 
@@ -228,6 +234,7 @@ pub async fn do_update_vectors(
         wait,
         ordering,
         shard_selector,
+        clock_sync,
     )
     .await
 }
@@ -239,6 +246,7 @@ pub async fn do_delete_vectors(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let DeleteVectors {
         vector,
@@ -264,24 +272,27 @@ pub async fn do_delete_vectors(
                 wait,
                 ordering,
                 shard_selector.clone(),
+                clock_sync,
             )
             .await?,
         );
-    }
-
-    if let Some(points) = points {
-        let vectors_operation = VectorOperations::DeleteVectors(points.into(), vector_names);
-        let collection_operation = CollectionUpdateOperations::VectorOperation(vectors_operation);
-        result = Some(
-            toc.update(
-                collection_name,
-                collection_operation,
-                wait,
-                ordering,
-                shard_selector,
-            )
-            .await?,
-        );
+    } else {
+        if let Some(points) = points {
+            let vectors_operation = VectorOperations::DeleteVectors(points.into(), vector_names);
+            let collection_operation =
+                CollectionUpdateOperations::VectorOperation(vectors_operation);
+            result = Some(
+                toc.update(
+                    collection_name,
+                    collection_operation,
+                    wait,
+                    ordering,
+                    shard_selector,
+                    clock_sync,
+                )
+                .await?,
+            );
+        }
     }
 
     result.ok_or_else(|| StorageError::bad_request("No filter or points provided"))
@@ -294,6 +305,7 @@ pub async fn do_set_payload(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let SetPayload {
         points,
@@ -317,6 +329,7 @@ pub async fn do_set_payload(
         wait,
         ordering,
         shard_selector,
+        clock_sync,
     )
     .await
 }
@@ -328,6 +341,7 @@ pub async fn do_overwrite_payload(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let SetPayload {
         points,
@@ -351,6 +365,7 @@ pub async fn do_overwrite_payload(
         wait,
         ordering,
         shard_selector,
+        clock_sync,
     )
     .await
 }
@@ -362,6 +377,7 @@ pub async fn do_delete_payload(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let DeletePayload {
         keys,
@@ -385,6 +401,7 @@ pub async fn do_delete_payload(
         wait,
         ordering,
         shard_selector,
+        clock_sync,
     )
     .await
 }
@@ -396,6 +413,7 @@ pub async fn do_clear_payload(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let (point_operation, shard_key) = match points {
         PointsSelector::PointIdsSelector(PointIdsList { points, shard_key }) => {
@@ -416,6 +434,7 @@ pub async fn do_clear_payload(
         wait,
         ordering,
         shard_selector,
+        clock_sync,
     )
     .await
 }
@@ -429,6 +448,9 @@ pub async fn do_batch_update_points(
     ordering: WriteOrdering,
 ) -> Result<Vec<UpdateResult>, StorageError> {
     let mut results = Vec::with_capacity(operations.len());
+
+    // There are no internal batch update API, therefore clock_sync will be assigned later for individual operations
+    let clock_sync = None;
     for operation in operations {
         let result = match operation {
             UpdateOperation::Upsert(operation) => {
@@ -439,6 +461,7 @@ pub async fn do_batch_update_points(
                     shard_selection,
                     wait,
                     ordering,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -450,6 +473,7 @@ pub async fn do_batch_update_points(
                     shard_selection,
                     wait,
                     ordering,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -461,6 +485,7 @@ pub async fn do_batch_update_points(
                     shard_selection,
                     wait,
                     ordering,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -472,6 +497,7 @@ pub async fn do_batch_update_points(
                     shard_selection,
                     wait,
                     ordering,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -483,6 +509,7 @@ pub async fn do_batch_update_points(
                     shard_selection,
                     wait,
                     ordering,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -494,6 +521,7 @@ pub async fn do_batch_update_points(
                     shard_selection,
                     wait,
                     ordering,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -505,6 +533,7 @@ pub async fn do_batch_update_points(
                     shard_selection,
                     wait,
                     ordering,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -516,6 +545,7 @@ pub async fn do_batch_update_points(
                     shard_selection,
                     wait,
                     ordering,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -533,6 +563,7 @@ pub async fn do_create_index_internal(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let collection_operation = CollectionUpdateOperations::FieldIndexOperation(
         FieldIndexOperations::CreateIndex(CreateIndex {
@@ -553,6 +584,7 @@ pub async fn do_create_index_internal(
         wait,
         ordering,
         shard_selector,
+        clock_sync,
     )
     .await
 }
@@ -564,6 +596,7 @@ pub async fn do_create_index(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let Some(field_schema) = operation.field_schema else {
         return Err(StorageError::bad_request(
@@ -596,6 +629,7 @@ pub async fn do_create_index(
         shard_selection,
         wait,
         ordering,
+        clock_sync,
     )
     .await
 }
@@ -607,6 +641,7 @@ pub async fn do_delete_index_internal(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let collection_operation = CollectionUpdateOperations::FieldIndexOperation(
         FieldIndexOperations::DeleteIndex(index_name),
@@ -624,6 +659,7 @@ pub async fn do_delete_index_internal(
         wait,
         ordering,
         shard_selector,
+        clock_sync,
     )
     .await
 }
@@ -635,6 +671,7 @@ pub async fn do_delete_index(
     shard_selection: Option<ShardId>,
     wait: bool,
     ordering: WriteOrdering,
+    clock_sync: Option<ClockSync>,
 ) -> Result<UpdateResult, StorageError> {
     let consensus_op = CollectionMetaOperations::DropPayloadIndex(DropPayloadIndex {
         collection_name: collection_name.to_string(),
@@ -655,6 +692,7 @@ pub async fn do_delete_index(
         shard_selection,
         wait,
         ordering,
+        clock_sync,
     )
     .await
 }

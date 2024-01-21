@@ -4,6 +4,7 @@ use segment::types::ShardKey;
 
 use crate::collection::Collection;
 use crate::config::ShardingMethod;
+use crate::operations::clock_sync::ClockSync;
 use crate::operations::types::CollectionError;
 use crate::operations::{CollectionUpdateOperations, CreateIndex, FieldIndexOperations};
 use crate::shards::replica_set::{ReplicaState, ShardReplicaSet};
@@ -97,6 +98,7 @@ impl Collection {
                 .create_replica_set(shard_id, shard_replicas_placement)
                 .await?;
 
+            let mut tick = 1;
             for (field_name, field_schema) in payload_schema.iter() {
                 let create_index_op = CollectionUpdateOperations::FieldIndexOperation(
                     FieldIndexOperations::CreateIndex(CreateIndex {
@@ -105,7 +107,12 @@ impl Collection {
                     }),
                 );
 
-                replica_set.update_local(create_index_op, true).await?;
+                // ToDo[vector-clock]: Is this correct?
+                let clock_sync = ClockSync::new(tick, 0, 0);
+                replica_set
+                    .update_local(create_index_op, true, Some(clock_sync))
+                    .await?;
+                tick += 1;
             }
 
             self.shards_holder.write().await.add_shard(

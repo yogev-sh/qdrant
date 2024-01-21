@@ -7,6 +7,7 @@ use segment::types::{
 };
 use tokio::runtime::Handle;
 
+use crate::operations::clock_sync::ClockSync;
 use crate::operations::types::{
     CollectionInfo, CollectionResult, CoreSearchRequestBatch, CountRequestInternal, CountResult,
     PointRequestInternal, Record, UpdateResult,
@@ -19,6 +20,7 @@ pub trait ShardOperation {
         &self,
         operation: CollectionUpdateOperations,
         wait: bool,
+        clock_sync: Option<ClockSync>,
     ) -> CollectionResult<UpdateResult>;
 
     #[allow(clippy::too_many_arguments)]

@@ -294,9 +294,20 @@ impl ShardReplicaSet {
             )));
         };
 
-        proxy
-            .transfer_batch(offset, batch_size, &self.search_runtime)
-            .await
+        let peer_id = self.this_peer_id();
+        let vector_clock_guard = self.vector_clock.lock().await.occupy();
+
+        let res = proxy
+            .transfer_batch(
+                offset,
+                batch_size,
+                &self.search_runtime,
+                vector_clock_guard.get_clock_sync(peer_id),
+            )
+            .await;
+
+        vector_clock_guard.resolve();
+        res
     }
 
     /// Custom operation for transferring indexes from one shard to another during transfer
@@ -319,7 +330,15 @@ impl ShardReplicaSet {
             proxy.remote_shard.peer_id,
         );
 
-        proxy.transfer_indexes().await
+        let peer_id = self.this_peer_id();
+        let vector_clock_guard = self.vector_clock.lock().await.occupy();
+
+        proxy
+            .transfer_indexes(|| {
+                vector_clock_guard.increment();
+                vector_clock_guard.get_clock_sync(peer_id)
+            })
+            .await
     }
 
     /// Send all queue proxy updates to remote and transform into forward proxy

@@ -47,8 +47,9 @@ message SyncPoints {
 }
 
 message ClockSync {
-  uint64 value = 1;
+  uint64 tick = 1;
   uint64 peer_id = 2;
+  uint64 thread_id = 3;
 }
 
 message SyncPointsInternal {

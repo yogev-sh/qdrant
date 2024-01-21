@@ -5,6 +5,7 @@ use segment::types::{PayloadFieldSchema, PayloadKeyType};
 use serde::{Deserialize, Serialize};
 
 use crate::collection::Collection;
+use crate::operations::clock_sync::ClockSync;
 use crate::operations::types::{CollectionResult, UpdateResult};
 use crate::operations::{CollectionUpdateOperations, CreateIndex, FieldIndexOperations};
 use crate::save_on_disk::SaveOnDisk;
@@ -55,7 +56,12 @@ impl Collection {
         // as indexation may take a long time
         let wait = false;
 
-        let result = self.update_all_local(create_index_operation, wait).await?;
+        // ToDo[vector-clock]: Is this correct?
+        let clock_sync = ClockSync::new(0, 0, 0);
+
+        let result = self
+            .update_all_local(create_index_operation, wait, Some(clock_sync))
+            .await?;
 
         Ok(result)
     }
@@ -72,7 +78,12 @@ impl Collection {
             FieldIndexOperations::DeleteIndex(field_name),
         );
 
-        let result = self.update_all_local(delete_index_operation, false).await?;
+        // ToDo[vector-clock]: Is this correct?
+        let clock_sync = ClockSync::new(0, 0, 0);
+
+        let result = self
+            .update_all_local(delete_index_operation, false, Some(clock_sync))
+            .await?;
 
         Ok(result)
     }

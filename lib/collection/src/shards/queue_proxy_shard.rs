@@ -13,6 +13,7 @@ use tokio::sync::Mutex;
 use super::remote_shard::RemoteShard;
 use super::transfer::driver::MAX_RETRY_COUNT;
 use super::update_tracker::UpdateTracker;
+use crate::operations::clock_sync::ClockSync;
 use crate::operations::point_ops::WriteOrdering;
 use crate::operations::types::{
     CollectionInfo, CollectionResult, CoreSearchRequestBatch, CountRequestInternal, CountResult,
@@ -156,11 +157,12 @@ impl ShardOperation for QueueProxyShard {
         &self,
         operation: CollectionUpdateOperations,
         wait: bool,
+        clock_sync: Option<ClockSync>,
     ) -> CollectionResult<UpdateResult> {
         self.inner
             .as_ref()
             .expect("Queue proxy has been finalized")
-            .update(operation, wait)
+            .update(operation, wait, clock_sync)
             .await
     }
 
@@ -385,12 +387,15 @@ impl ShardOperation for Inner {
         &self,
         operation: CollectionUpdateOperations,
         wait: bool,
+        clock_sync: Option<ClockSync>,
     ) -> CollectionResult<UpdateResult> {
         let _update_lock = self.update_lock.lock().await;
         let local_shard = &self.wrapped_shard;
         // Shard update is within a write lock scope, because we need a way to block the shard updates
         // during the transfer restart and finalization.
-        local_shard.update(operation.clone(), wait).await
+        local_shard
+            .update(operation.clone(), wait, clock_sync)
+            .await
     }
 
     /// Forward read-only `scroll_by` to `wrapped_shard`
@@ -468,8 +473,9 @@ async fn transfer_operations_batch(
 ) -> CollectionResult<()> {
     // TODO: naive transfer approach, transfer batch of points instead
     for (_idx, operation) in batch {
+        let clock_sync = None; //ToDo[vector-clock]: add clock sync
         remote_shard
-            .forward_update(operation.clone(), true, WriteOrdering::Weak)
+            .forward_update(operation.clone(), true, WriteOrdering::Weak, clock_sync)
             .await?;
     }
     Ok(())

@@ -11,6 +11,7 @@ use tokio::runtime::Handle;
 use tokio::sync::Mutex;
 
 use super::update_tracker::UpdateTracker;
+use crate::operations::clock_sync::ClockSync;
 use crate::operations::point_ops::{PointOperations, PointStruct, PointSyncOperation};
 use crate::operations::types::{
     CollectionError, CollectionInfo, CollectionResult, CoreSearchRequestBatch,
@@ -50,10 +51,14 @@ impl ForwardProxyShard {
     /// # Cancel safety
     ///
     /// This method is cancel safe.
-    pub async fn transfer_indexes(&self) -> CollectionResult<()> {
+    pub async fn transfer_indexes(
+        &self,
+        get_clock_sync: impl Fn() -> ClockSync,
+    ) -> CollectionResult<()> {
         let _update_lock = self.update_lock.lock().await;
         for (index_key, index_type) in self.wrapped_shard.info().await?.payload_schema {
             // TODO: Is cancelling `RemoteShard::update` safe for *receiver*?
+            let clock_sync = get_clock_sync();
             self.remote_shard
                 .update(
                     CollectionUpdateOperations::FieldIndexOperation(
@@ -63,6 +68,7 @@ impl ForwardProxyShard {
                         }),
                     ),
                     false,
+                    Some(clock_sync),
                 )
                 .await?;
         }
@@ -80,6 +86,7 @@ impl ForwardProxyShard {
         offset: Option<PointIdType>,
         batch_size: usize,
         runtime_handle: &Handle,
+        clock_sync: ClockSync,
     ) -> CollectionResult<Option<PointIdType>> {
         debug_assert!(batch_size > 0);
         let limit = batch_size + 1;
@@ -124,7 +131,7 @@ impl ForwardProxyShard {
 
         // TODO: Is cancelling `RemoteShard::update` safe for *receiver*?
         self.remote_shard
-            .update(insert_points_operation, wait)
+            .update(insert_points_operation, wait, Some(clock_sync))
             .await?;
 
         Ok(next_page_offset)
@@ -166,15 +173,18 @@ impl ShardOperation for ForwardProxyShard {
         &self,
         operation: CollectionUpdateOperations,
         wait: bool,
+        clock_sync: Option<ClockSync>,
     ) -> CollectionResult<UpdateResult> {
         let _update_lock = self.update_lock.lock().await;
         let local_shard = &self.wrapped_shard;
         // Shard update is within a write lock scope, because we need a way to block the shard updates
         // during the transfer restart and finalization.
-        local_shard.update(operation.clone(), wait).await?;
+        local_shard
+            .update(operation.clone(), wait, clock_sync.clone())
+            .await?;
 
         self.remote_shard
-            .update(operation, false)
+            .update(operation, false, clock_sync)
             .await
             .map_err(|err| CollectionError::forward_proxy_error(self.remote_shard.peer_id, err))
     }

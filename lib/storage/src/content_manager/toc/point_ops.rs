@@ -3,6 +3,7 @@ use std::time::Duration;
 use collection::collection::Collection;
 use collection::grouping::group_by::GroupRequest;
 use collection::grouping::GroupBy;
+use collection::operations::clock_sync::ClockSync;
 use collection::operations::consistency_params::ReadConsistency;
 use collection::operations::point_ops::WriteOrdering;
 use collection::operations::shard_selector_internal::ShardSelectorInternal;
@@ -276,7 +277,7 @@ impl TableOfContent {
         wait: bool,
         ordering: WriteOrdering,
         shard_selector: ShardSelectorInternal,
-        // ToDo[vector-clock]: Add clock_tick and peer_id as propagated arguments
+        clock_sync: Option<ClockSync>,
     ) -> Result<UpdateResult, StorageError> {
         let collection = self.get_collection(collection_name).await?;
 
@@ -348,7 +349,7 @@ impl TableOfContent {
             }
             ShardSelectorInternal::ShardId(shard_selection) => {
                 collection
-                    .update_from_peer(operation, shard_selection, wait, ordering)
+                    .update_from_peer(operation, shard_selection, wait, ordering, clock_sync)
                     .await?
             }
         };

@@ -14,6 +14,7 @@ use tokio::sync::{oneshot, RwLock};
 use tokio::time::timeout;
 
 use super::update_tracker::UpdateTracker;
+use crate::operations::clock_sync::ClockSync;
 use crate::operations::operation_effect::{
     EstimateOperationEffectArea, OperationEffectArea, PointsOperationEffect,
 };
@@ -133,6 +134,7 @@ impl ShardOperation for ProxyShard {
         &self,
         operation: CollectionUpdateOperations,
         wait: bool,
+        clock_sync: Option<ClockSync>,
     ) -> CollectionResult<UpdateResult> {
         let local_shard = &self.wrapped_shard;
         let estimate_effect = operation.estimate_effect_area();
@@ -168,7 +170,7 @@ impl ShardOperation for ProxyShard {
             }
             // Shard update is within a write lock scope, because we need a way to block the shard updates
             // during the transfer restart and finalization.
-            local_shard.update(operation, wait).await
+            local_shard.update(operation, wait, clock_sync).await
         }
     }
 

@@ -1,3 +1,4 @@
+pub mod clock_sync;
 pub mod cluster_ops;
 pub mod config_diff;
 pub mod consistency_params;

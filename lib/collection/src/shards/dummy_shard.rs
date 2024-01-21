@@ -8,6 +8,7 @@ use segment::types::{
 };
 use tokio::runtime::Handle;
 
+use crate::operations::clock_sync::ClockSync;
 use crate::operations::types::{
     CollectionError, CollectionInfo, CollectionResult, CoreSearchRequestBatch,
     CountRequestInternal, CountResult, PointRequestInternal, Record, UpdateResult,
@@ -58,8 +59,9 @@ impl DummyShard {
 impl ShardOperation for DummyShard {
     async fn update(
         &self,
-        _: CollectionUpdateOperations,
-        _: bool,
+        _operation: CollectionUpdateOperations,
+        _wait: bool,
+        _clock_sync: Option<ClockSync>,
     ) -> CollectionResult<UpdateResult> {
         self.dummy()
     }

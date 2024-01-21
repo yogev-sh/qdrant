@@ -6959,9 +6959,11 @@ pub struct SyncPoints {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ClockSync {
     #[prost(uint64, tag = "1")]
-    pub value: u64,
+    pub tick: u64,
     #[prost(uint64, tag = "2")]
     pub peer_id: u64,
+    #[prost(uint64, tag = "3")]
+    pub thread_id: u64,
 }
 #[derive(serde::Serialize)]
 #[derive(validator::Validate)]

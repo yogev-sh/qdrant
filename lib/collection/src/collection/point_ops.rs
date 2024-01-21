@@ -6,6 +6,7 @@ use segment::types::{ShardKey, WithPayload, WithPayloadInterface};
 use validator::Validate as _;
 
 use super::Collection;
+use crate::operations::clock_sync::ClockSync;
 use crate::operations::consistency_params::ReadConsistency;
 use crate::operations::point_ops::WriteOrdering;
 use crate::operations::shard_selector_internal::ShardSelectorInternal;
@@ -20,13 +21,14 @@ impl Collection {
         &self,
         operation: CollectionUpdateOperations,
         wait: bool,
+        clock_sync: Option<ClockSync>,
     ) -> CollectionResult<Option<UpdateResult>> {
         let _update_lock = self.updates_lock.read().await;
         let shard_holder_guard = self.shards_holder.read().await;
 
         let res: Vec<_> = shard_holder_guard
             .all_shards()
-            .map(|shard| shard.update_local(operation.clone(), wait))
+            .map(|shard| shard.update_local(operation.clone(), wait, clock_sync.clone()))
             .collect();
 
         let results: Vec<_> = future::try_join_all(res).await?;
@@ -45,6 +47,7 @@ impl Collection {
         shard_selection: ShardId,
         wait: bool,
         ordering: WriteOrdering,
+        clock_sync: Option<ClockSync>,
     ) -> CollectionResult<UpdateResult> {
         let _update_lock = self.updates_lock.read().await;
         let shard_holder_guard = self.shards_holder.read().await;
@@ -52,7 +55,11 @@ impl Collection {
         let res = match shard_holder_guard.get_shard(&shard_selection) {
             None => None,
             Some(target_shard) => match ordering {
-                WriteOrdering::Weak => target_shard.update_local(operation, wait).await?,
+                WriteOrdering::Weak => {
+                    target_shard
+                        .update_local(operation, wait, clock_sync)
+                        .await?
+                }
                 WriteOrdering::Medium | WriteOrdering::Strong => Some(
                     target_shard
                         .update_with_consistency(operation, wait, ordering)
