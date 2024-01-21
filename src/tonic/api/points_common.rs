@@ -3,17 +3,7 @@ use std::time::{Duration, Instant};
 use api::grpc::conversions::proto_to_payloads;
 use api::grpc::qdrant::payload_index_params::IndexParams;
 use api::grpc::qdrant::points_update_operation::{ClearPayload, Operation, PointStructList};
-use api::grpc::qdrant::{
-    points_update_operation, BatchResult, ClearPayloadPoints, CoreSearchPoints, CountPoints,
-    CountResponse, CreateFieldIndexCollection, DeleteFieldIndexCollection, DeletePayloadPoints,
-    DeletePointVectors, DeletePoints, DiscoverBatchResponse, DiscoverPoints, DiscoverResponse,
-    FieldType, GetPoints, GetResponse, PayloadIndexParams, PointsOperationResponseInternal,
-    PointsSelector, ReadConsistency as ReadConsistencyGrpc, RecommendBatchResponse,
-    RecommendGroupsResponse, RecommendPointGroups, RecommendPoints, RecommendResponse,
-    ScrollPoints, ScrollResponse, SearchBatchResponse, SearchGroupsResponse, SearchPointGroups,
-    SearchPoints, SearchResponse, SetPayloadPoints, SyncPoints, UpdateBatchPoints,
-    UpdateBatchResponse, UpdatePointVectors, UpdateResult, UpdateResultInternal, UpsertPoints,
-};
+use api::grpc::qdrant::{points_update_operation, BatchResult, ClearPayloadPoints, CoreSearchPoints, CountPoints, CountResponse, CreateFieldIndexCollection, DeleteFieldIndexCollection, DeletePayloadPoints, DeletePointVectors, DeletePoints, DiscoverBatchResponse, DiscoverPoints, DiscoverResponse, FieldType, GetPoints, GetResponse, PayloadIndexParams, PointsOperationResponseInternal, PointsSelector, ReadConsistency as ReadConsistencyGrpc, RecommendBatchResponse, RecommendGroupsResponse, RecommendPointGroups, RecommendPoints, RecommendResponse, ScrollPoints, ScrollResponse, SearchBatchResponse, SearchGroupsResponse, SearchPointGroups, SearchPoints, SearchResponse, SetPayloadPoints, SyncPoints, UpdateBatchPoints, UpdateBatchResponse, UpdatePointVectors, UpdateResult, UpdateResultInternal, UpsertPoints, ClockSync};
 use collection::operations::consistency_params::ReadConsistency;
 use collection::operations::conversions::{
     try_discover_request_from_grpc, try_points_selector_from_grpc, write_ordering_from_proto,
@@ -38,6 +28,7 @@ use storage::content_manager::conversions::error_to_status;
 use storage::content_manager::toc::TableOfContent;
 use storage::dispatcher::Dispatcher;
 use tonic::{Response, Status};
+use collection::operations;
 
 use crate::common::points::{
     do_clear_payload, do_core_search_points, do_count_points, do_create_index,
@@ -104,6 +95,7 @@ pub async fn upsert(
     toc: &TableOfContent,
     upsert_points: UpsertPoints,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<operations::clock_sync::ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let UpsertPoints {
         collection_name,
@@ -128,6 +120,7 @@ pub async fn upsert(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        clock_sync,
     )
     .await
     .map_err(error_to_status)?;
@@ -140,6 +133,7 @@ pub async fn sync(
     toc: &TableOfContent,
     sync_points: SyncPoints,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<operations::clock_sync::ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let SyncPoints {
         collection_name,
@@ -179,6 +173,7 @@ pub async fn sync(
             wait.unwrap_or(false),
             write_ordering_from_proto(ordering)?,
             shard_selector,
+            clock_sync,
         )
         .await
         .map_err(error_to_status)?;
@@ -191,6 +186,7 @@ pub async fn delete(
     toc: &TableOfContent,
     delete_points: DeletePoints,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<operations::clock_sync::ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let DeletePoints {
         collection_name,
@@ -213,6 +209,7 @@ pub async fn delete(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        clock_sync,
     )
     .await
     .map_err(error_to_status)?;
@@ -225,6 +222,7 @@ pub async fn update_vectors(
     toc: &TableOfContent,
     update_point_vectors: UpdatePointVectors,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<operations::clock_sync::ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let UpdatePointVectors {
         collection_name,
@@ -261,6 +259,7 @@ pub async fn update_vectors(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        clock_sync,
     )
     .await
     .map_err(error_to_status)?;
@@ -273,6 +272,7 @@ pub async fn delete_vectors(
     toc: &TableOfContent,
     delete_point_vectors: DeletePointVectors,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<operations::clock_sync::ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let DeletePointVectors {
         collection_name,
@@ -304,6 +304,7 @@ pub async fn delete_vectors(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        clock_sync,
     )
     .await
     .map_err(error_to_status)?;
@@ -316,6 +317,7 @@ pub async fn set_payload(
     toc: &TableOfContent,
     set_payload_points: SetPayloadPoints,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<operations::clock_sync::ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let SetPayloadPoints {
         collection_name,
@@ -342,6 +344,7 @@ pub async fn set_payload(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        clock_sync,
     )
     .await
     .map_err(error_to_status)?;
@@ -354,6 +357,7 @@ pub async fn overwrite_payload(
     toc: &TableOfContent,
     set_payload_points: SetPayloadPoints,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<operations::clock_sync::ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let SetPayloadPoints {
         collection_name,
@@ -380,6 +384,7 @@ pub async fn overwrite_payload(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        clock_sync,
     )
     .await
     .map_err(error_to_status)?;
@@ -392,6 +397,7 @@ pub async fn delete_payload(
     toc: &TableOfContent,
     delete_payload_points: DeletePayloadPoints,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<operations::clock_sync::ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let DeletePayloadPoints {
         collection_name,
@@ -418,6 +424,7 @@ pub async fn delete_payload(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        clock_sync
     )
     .await
     .map_err(error_to_status)?;
@@ -430,6 +437,7 @@ pub async fn clear_payload(
     toc: &TableOfContent,
     clear_payload_points: ClearPayloadPoints,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<operations::clock_sync::ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let ClearPayloadPoints {
         collection_name,
@@ -452,6 +460,7 @@ pub async fn clear_payload(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        clock_sync,
     )
     .await
     .map_err(error_to_status)?;
@@ -471,6 +480,8 @@ pub async fn update_batch(
         operations,
         ordering,
     } = update_batch_points;
+
+    let clock_sync = None; // Update batch is strictly external API, so we don't need to sync clocks
 
     let timing = Instant::now();
     let mut results = Vec::with_capacity(operations.len());
@@ -495,6 +506,7 @@ pub async fn update_batch(
                         shard_key_selector,
                     },
                     shard_selection,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -509,6 +521,7 @@ pub async fn update_batch(
                         shard_key_selector: None,
                     },
                     shard_selection,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -530,6 +543,7 @@ pub async fn update_batch(
                         shard_key_selector,
                     },
                     shard_selection,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -551,6 +565,7 @@ pub async fn update_batch(
                         shard_key_selector,
                     },
                     shard_selection,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -572,6 +587,7 @@ pub async fn update_batch(
                         shard_key_selector,
                     },
                     shard_selection,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -589,6 +605,7 @@ pub async fn update_batch(
                         shard_key_selector,
                     },
                     shard_selection,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -608,6 +625,7 @@ pub async fn update_batch(
                         shard_key_selector,
                     },
                     shard_selection,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -629,6 +647,7 @@ pub async fn update_batch(
                         shard_key_selector,
                     },
                     shard_selection,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -643,6 +662,7 @@ pub async fn update_batch(
                         shard_key_selector: None,
                     },
                     shard_selection,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -660,6 +680,7 @@ pub async fn update_batch(
                         shard_key_selector,
                     },
                     shard_selection,
+                    clock_sync.clone(),
                 )
                 .await
             }
@@ -758,6 +779,7 @@ pub async fn create_field_index(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        None, // clock sync is not supported for public API
     )
     .await
     .map_err(error_to_status)?;
@@ -770,6 +792,7 @@ pub async fn create_field_index_internal(
     toc: &TableOfContent,
     create_field_index_collection: CreateFieldIndexCollection,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<ClockSync>
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let CreateFieldIndexCollection {
         collection_name,
@@ -791,6 +814,7 @@ pub async fn create_field_index_internal(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        clock_sync.map(operations::clock_sync::ClockSync::from),
     )
     .await
     .map_err(error_to_status)?;
@@ -819,6 +843,7 @@ pub async fn delete_field_index(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        None, // clock sync is not supported for public API
     )
     .await
     .map_err(error_to_status)?;
@@ -831,6 +856,7 @@ pub async fn delete_field_index_internal(
     toc: &TableOfContent,
     delete_field_index_collection: DeleteFieldIndexCollection,
     shard_selection: Option<ShardId>,
+    clock_sync: Option<ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let DeleteFieldIndexCollection {
         collection_name,
@@ -847,6 +873,7 @@ pub async fn delete_field_index_internal(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
+        clock_sync.map(operations::clock_sync::ClockSync::from),
     )
     .await
     .map_err(error_to_status)?;

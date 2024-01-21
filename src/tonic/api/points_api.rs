@@ -44,7 +44,7 @@ impl Points for PointsService {
         request: Request<UpsertPoints>,
     ) -> Result<Response<PointsOperationResponse>, Status> {
         validate(request.get_ref())?;
-        upsert(self.dispatcher.as_ref(), request.into_inner(), None)
+        upsert(self.dispatcher.as_ref(), request.into_inner(), None, None)
             .await
             .map(|res| res.map(PointsOperationResponse::from))
     }
@@ -54,7 +54,7 @@ impl Points for PointsService {
         request: Request<DeletePoints>,
     ) -> Result<Response<PointsOperationResponse>, Status> {
         validate(request.get_ref())?;
-        delete(self.dispatcher.as_ref(), request.into_inner(), None)
+        delete(self.dispatcher.as_ref(), request.into_inner(), None, None)
             .await
             .map(|res| res.map(PointsOperationResponse::from))
     }
@@ -69,7 +69,7 @@ impl Points for PointsService {
         request: Request<UpdatePointVectors>,
     ) -> Result<Response<PointsOperationResponse>, Status> {
         validate(request.get_ref())?;
-        update_vectors(self.dispatcher.as_ref(), request.into_inner(), None)
+        update_vectors(self.dispatcher.as_ref(), request.into_inner(), None, None)
             .await
             .map(|res| res.map(PointsOperationResponse::from))
     }
@@ -79,7 +79,7 @@ impl Points for PointsService {
         request: Request<DeletePointVectors>,
     ) -> Result<Response<PointsOperationResponse>, Status> {
         validate(request.get_ref())?;
-        delete_vectors(self.dispatcher.as_ref(), request.into_inner(), None)
+        delete_vectors(self.dispatcher.as_ref(), request.into_inner(), None, None)
             .await
             .map(|res| res.map(PointsOperationResponse::from))
     }
@@ -89,7 +89,7 @@ impl Points for PointsService {
         request: Request<SetPayloadPoints>,
     ) -> Result<Response<PointsOperationResponse>, Status> {
         validate(request.get_ref())?;
-        set_payload(self.dispatcher.as_ref(), request.into_inner(), None)
+        set_payload(self.dispatcher.as_ref(), request.into_inner(), None, None)
             .await
             .map(|res| res.map(PointsOperationResponse::from))
     }
@@ -99,7 +99,7 @@ impl Points for PointsService {
         request: Request<SetPayloadPoints>,
     ) -> Result<Response<PointsOperationResponse>, Status> {
         validate(request.get_ref())?;
-        overwrite_payload(self.dispatcher.as_ref(), request.into_inner(), None)
+        overwrite_payload(self.dispatcher.as_ref(), request.into_inner(), None, None)
             .await
             .map(|res| res.map(PointsOperationResponse::from))
     }
@@ -109,7 +109,7 @@ impl Points for PointsService {
         request: Request<DeletePayloadPoints>,
     ) -> Result<Response<PointsOperationResponse>, Status> {
         validate(request.get_ref())?;
-        delete_payload(self.dispatcher.as_ref(), request.into_inner(), None)
+        delete_payload(self.dispatcher.as_ref(), request.into_inner(), None, None)
             .await
             .map(|res| res.map(PointsOperationResponse::from))
     }
@@ -119,7 +119,7 @@ impl Points for PointsService {
         request: Request<ClearPayloadPoints>,
     ) -> Result<Response<PointsOperationResponse>, Status> {
         validate(request.get_ref())?;
-        clear_payload(self.dispatcher.as_ref(), request.into_inner(), None)
+        clear_payload(self.dispatcher.as_ref(), request.into_inner(), None, None)
             .await
             .map(|res| res.map(PointsOperationResponse::from))
     }

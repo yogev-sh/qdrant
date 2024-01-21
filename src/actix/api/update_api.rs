@@ -50,6 +50,7 @@ async fn upsert_points(
         None,
         wait,
         ordering,
+        None,
     )
     .await;
     process_response(response, timing)
@@ -74,6 +75,7 @@ async fn delete_points(
         None,
         wait,
         ordering,
+        None,
     )
     .await;
     process_response(response, timing)
@@ -98,6 +100,7 @@ async fn update_vectors(
         None,
         wait,
         ordering,
+        None,
     )
     .await;
     process_response(response, timing)
@@ -122,6 +125,7 @@ async fn delete_vectors(
         None,
         wait,
         ordering,
+        None,
     )
     .await;
     process_response(response, timing)
@@ -146,6 +150,7 @@ async fn set_payload(
         None,
         wait,
         ordering,
+        None,
     )
     .await;
     process_response(response, timing)
@@ -170,6 +175,7 @@ async fn overwrite_payload(
         None,
         wait,
         ordering,
+        None,
     )
     .await;
     process_response(response, timing)
@@ -194,6 +200,7 @@ async fn delete_payload(
         None,
         wait,
         ordering,
+        None,
     )
     .await;
     process_response(response, timing)
@@ -218,6 +225,7 @@ async fn clear_payload(
         None,
         wait,
         ordering,
+        None,
     )
     .await;
     process_response(response, timing)
@@ -265,6 +273,7 @@ async fn create_field_index(
         None,
         wait,
         ordering,
+        None,
     )
     .await;
     process_response(response, timing)
@@ -288,6 +297,7 @@ async fn delete_field_index(
         None,
         wait,
         ordering,
+        None,
     )
     .await;
     process_response(response, timing)

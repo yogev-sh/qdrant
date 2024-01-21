@@ -276,23 +276,20 @@ pub async fn do_delete_vectors(
             )
             .await?,
         );
-    } else {
-        if let Some(points) = points {
-            let vectors_operation = VectorOperations::DeleteVectors(points.into(), vector_names);
-            let collection_operation =
-                CollectionUpdateOperations::VectorOperation(vectors_operation);
-            result = Some(
-                toc.update(
-                    collection_name,
-                    collection_operation,
-                    wait,
-                    ordering,
-                    shard_selector,
-                    clock_sync,
-                )
-                .await?,
-            );
-        }
+    } else if let Some(points) = points {
+        let vectors_operation = VectorOperations::DeleteVectors(points.into(), vector_names);
+        let collection_operation = CollectionUpdateOperations::VectorOperation(vectors_operation);
+        result = Some(
+            toc.update(
+                collection_name,
+                collection_operation,
+                wait,
+                ordering,
+                shard_selector,
+                clock_sync,
+            )
+            .await?,
+        );
     }
 
     result.ok_or_else(|| StorageError::bad_request("No filter or points provided"))
@@ -555,6 +552,7 @@ pub async fn do_batch_update_points(
     Ok(results)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn do_create_index_internal(
     toc: &TableOfContent,
     collection_name: &str,
