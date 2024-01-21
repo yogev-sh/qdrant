@@ -3,7 +3,19 @@ use std::time::{Duration, Instant};
 use api::grpc::conversions::proto_to_payloads;
 use api::grpc::qdrant::payload_index_params::IndexParams;
 use api::grpc::qdrant::points_update_operation::{ClearPayload, Operation, PointStructList};
-use api::grpc::qdrant::{points_update_operation, BatchResult, ClearPayloadPoints, CoreSearchPoints, CountPoints, CountResponse, CreateFieldIndexCollection, DeleteFieldIndexCollection, DeletePayloadPoints, DeletePointVectors, DeletePoints, DiscoverBatchResponse, DiscoverPoints, DiscoverResponse, FieldType, GetPoints, GetResponse, PayloadIndexParams, PointsOperationResponseInternal, PointsSelector, ReadConsistency as ReadConsistencyGrpc, RecommendBatchResponse, RecommendGroupsResponse, RecommendPointGroups, RecommendPoints, RecommendResponse, ScrollPoints, ScrollResponse, SearchBatchResponse, SearchGroupsResponse, SearchPointGroups, SearchPoints, SearchResponse, SetPayloadPoints, SyncPoints, UpdateBatchPoints, UpdateBatchResponse, UpdatePointVectors, UpdateResult, UpdateResultInternal, UpsertPoints, ClockSync};
+use api::grpc::qdrant::{
+    points_update_operation, BatchResult, ClearPayloadPoints, ClockSync, CoreSearchPoints,
+    CountPoints, CountResponse, CreateFieldIndexCollection, DeleteFieldIndexCollection,
+    DeletePayloadPoints, DeletePointVectors, DeletePoints, DiscoverBatchResponse, DiscoverPoints,
+    DiscoverResponse, FieldType, GetPoints, GetResponse, PayloadIndexParams,
+    PointsOperationResponseInternal, PointsSelector, ReadConsistency as ReadConsistencyGrpc,
+    RecommendBatchResponse, RecommendGroupsResponse, RecommendPointGroups, RecommendPoints,
+    RecommendResponse, ScrollPoints, ScrollResponse, SearchBatchResponse, SearchGroupsResponse,
+    SearchPointGroups, SearchPoints, SearchResponse, SetPayloadPoints, SyncPoints,
+    UpdateBatchPoints, UpdateBatchResponse, UpdatePointVectors, UpdateResult, UpdateResultInternal,
+    UpsertPoints,
+};
+use collection::operations;
 use collection::operations::consistency_params::ReadConsistency;
 use collection::operations::conversions::{
     try_discover_request_from_grpc, try_points_selector_from_grpc, write_ordering_from_proto,
@@ -28,7 +40,6 @@ use storage::content_manager::conversions::error_to_status;
 use storage::content_manager::toc::TableOfContent;
 use storage::dispatcher::Dispatcher;
 use tonic::{Response, Status};
-use collection::operations;
 
 use crate::common::points::{
     do_clear_payload, do_core_search_points, do_count_points, do_create_index,
@@ -424,7 +435,7 @@ pub async fn delete_payload(
         shard_selection,
         wait.unwrap_or(false),
         write_ordering_from_proto(ordering)?,
-        clock_sync
+        clock_sync,
     )
     .await
     .map_err(error_to_status)?;
@@ -792,7 +803,7 @@ pub async fn create_field_index_internal(
     toc: &TableOfContent,
     create_field_index_collection: CreateFieldIndexCollection,
     shard_selection: Option<ShardId>,
-    clock_sync: Option<ClockSync>
+    clock_sync: Option<ClockSync>,
 ) -> Result<Response<PointsOperationResponseInternal>, Status> {
     let CreateFieldIndexCollection {
         collection_name,
