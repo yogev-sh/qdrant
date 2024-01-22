@@ -32,6 +32,9 @@ pub struct EuclidMetric;
 #[derive(Clone)]
 pub struct ManhattanMetric;
 
+#[derive(Clone)]
+pub struct HammingMetric;
+
 impl Metric for EuclidMetric {
     fn distance() -> Distance {
         Distance::Euclid
@@ -113,6 +116,25 @@ impl Metric for ManhattanMetric {
 
     fn postprocess(score: ScoreType) -> ScoreType {
         score.abs()
+    }
+}
+
+impl Metric for HammingMetric {
+    fn distance() -> Distance {
+        Distance::Hamming
+    }
+
+    fn similarity(v1: &[VectorElementType], v2: &[VectorElementType]) -> ScoreType {
+
+        hamming_similarity(v1, v2)
+    }
+
+    fn preprocess(vector: DenseVector) -> DenseVector {
+        vector
+    }
+
+    fn postprocess(score: ScoreType) -> ScoreType {
+        score
     }
 }
 
@@ -237,6 +259,13 @@ pub fn manhattan_similarity(v1: &[VectorElementType], v2: &[VectorElementType]) 
         .zip(v2)
         .map(|(a, b)| (a - b).abs())
         .sum::<ScoreType>()
+}
+
+pub fn hamming_similarity(v1: &[VectorElementType], v2: &[VectorElementType]) -> ScoreType {
+    v1.iter()
+        .zip(v2.iter())
+        .filter(|(a, b)| a == b)
+        .count() as f32 / v1.len() as f32
 }
 
 pub fn cosine_preprocess(vector: DenseVector) -> DenseVector {
