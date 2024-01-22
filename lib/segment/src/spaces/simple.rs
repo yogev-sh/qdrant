@@ -125,7 +125,6 @@ impl Metric for HammingMetric {
     }
 
     fn similarity(v1: &[VectorElementType], v2: &[VectorElementType]) -> ScoreType {
-
         hamming_similarity(v1, v2)
     }
 
@@ -262,10 +261,7 @@ pub fn manhattan_similarity(v1: &[VectorElementType], v2: &[VectorElementType]) 
 }
 
 pub fn hamming_similarity(v1: &[VectorElementType], v2: &[VectorElementType]) -> ScoreType {
-    v1.iter()
-        .zip(v2.iter())
-        .filter(|(a, b)| a == b)
-        .count() as f32 / v1.len() as f32
+    v1.iter().zip(v2.iter()).filter(|(a, b)| a == b).count() as f32 / v1.len() as f32
 }
 
 pub fn cosine_preprocess(vector: DenseVector) -> DenseVector {

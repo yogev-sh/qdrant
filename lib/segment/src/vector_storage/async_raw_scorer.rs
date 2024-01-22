@@ -12,7 +12,9 @@ use super::query_scorer::custom_query_scorer::CustomQueryScorer;
 use crate::common::operation_error::{OperationError, OperationResult};
 use crate::data_types::vectors::{DenseVector, QueryVector, Vector, VectorElementType};
 use crate::spaces::metric::Metric;
-use crate::spaces::simple::{CosineMetric, DotProductMetric, EuclidMetric, HammingMetric, ManhattanMetric};
+use crate::spaces::simple::{
+    CosineMetric, DotProductMetric, EuclidMetric, HammingMetric, ManhattanMetric,
+};
 use crate::types::Distance;
 use crate::vector_storage::memmap_vector_storage::MemmapVectorStorage;
 use crate::vector_storage::mmap_vectors::MmapVectors;

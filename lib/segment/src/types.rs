@@ -29,7 +29,9 @@ use crate::data_types::text_index::TextIndexParams;
 use crate::data_types::vectors::{DenseVector, VectorElementType, VectorStruct};
 use crate::index::sparse_index::sparse_index_config::{SparseIndexConfig, SparseIndexType};
 use crate::spaces::metric::Metric;
-use crate::spaces::simple::{CosineMetric, DotProductMetric, EuclidMetric, ManhattanMetric, HammingMetric};
+use crate::spaces::simple::{
+    CosineMetric, DotProductMetric, EuclidMetric, HammingMetric, ManhattanMetric,
+};
 use crate::vector_storage::simple_sparse_vector_storage::SPARSE_VECTOR_DISTANCE;
 
 pub type PayloadKeyType = String;
@@ -127,7 +129,7 @@ pub enum Distance {
     // <https://simple.wikipedia.org/wiki/Manhattan_distance>
     Manhattan,
     // <https://en.wikipedia.org/wiki/Hamming_distance>
-    Hamming
+    Hamming,
 }
 
 impl Distance {
@@ -137,7 +139,7 @@ impl Distance {
             Distance::Euclid => EuclidMetric::preprocess(vector),
             Distance::Dot => DotProductMetric::preprocess(vector),
             Distance::Manhattan => ManhattanMetric::preprocess(vector),
-            Distance::Hamming => HammingMetric::preprocess(vector)
+            Distance::Hamming => HammingMetric::preprocess(vector),
         }
     }
 
@@ -147,8 +149,7 @@ impl Distance {
             Distance::Euclid => EuclidMetric::postprocess(score),
             Distance::Dot => DotProductMetric::postprocess(score),
             Distance::Manhattan => ManhattanMetric::postprocess(score),
-            Distance::Hamming => HammingMetric::postprocess(score)
-
+            Distance::Hamming => HammingMetric::postprocess(score),
         }
     }
 
