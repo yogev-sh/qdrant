@@ -219,7 +219,7 @@ pub(crate) unsafe fn hamming_similarity_avx(
             num_of_matching_f32_floats_mask.count_ones()
         })
         .sum();
-    (sum - ((v1.len() % 8) as u32)) as f32 / v1.len() as f32
+    ((sum - ((v1.len() % 8) as u32)) as usize / v1.len()) as f32
 }
 
 #[cfg(test)]
