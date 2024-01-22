@@ -125,6 +125,16 @@ impl Metric for HammingMetric {
     }
 
     fn similarity(v1: &[VectorElementType], v2: &[VectorElementType]) -> ScoreType {
+        #[cfg(target_arch = "x86_64")]
+        {
+            if is_x86_feature_detected!("avx")
+                && is_x86_feature_detected!("fma")
+                && v1.len() >= MIN_DIM_SIZE_AVX
+            {
+                return unsafe { hamming_similarity_avx(v1, v2) };
+            }
+        }
+
         hamming_similarity(v1, v2)
     }
 
