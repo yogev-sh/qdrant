@@ -199,6 +199,29 @@ pub(crate) unsafe fn dot_similarity_avx(
     result
 }
 
+#[target_feature(enable = "avx")]
+#[target_feature(enable = "fma")]
+pub(crate) unsafe fn hamming_similarity_avx(
+    v1: &[VectorElementType],
+    v2: &[VectorElementType],
+) -> ScoreType {
+    let sum: u32 = v1
+        .chunks_exact(8)
+        .into_iter()
+        .zip(v2.chunks_exact(8).into_iter())
+        .map(|(dv1, dv2)| {
+            let x_a = _mm256_loadu_ps(dv1.as_ptr());
+            let y_a = _mm256_loadu_ps(dv2.as_ptr());
+
+            let cmp_result = _mm256_cmp_ps::<_CMP_EQ_UQ>(x_a, y_a);
+            let num_of_matching_f32_floats_mask = _mm256_movemask_ps(cmp_result);
+
+            num_of_matching_f32_floats_mask.count_ones()
+        })
+        .sum();
+    ((sum - ((v1.len() % 8) as u32)) as usize / v1.len()) as f32
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

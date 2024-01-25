@@ -29,7 +29,9 @@ use crate::data_types::text_index::TextIndexParams;
 use crate::data_types::vectors::{DenseVector, VectorElementType, VectorStruct};
 use crate::index::sparse_index::sparse_index_config::{SparseIndexConfig, SparseIndexType};
 use crate::spaces::metric::Metric;
-use crate::spaces::simple::{CosineMetric, DotProductMetric, EuclidMetric, ManhattanMetric};
+use crate::spaces::simple::{
+    CosineMetric, DotProductMetric, EuclidMetric, HammingMetric, ManhattanMetric,
+};
 use crate::vector_storage::simple_sparse_vector_storage::SPARSE_VECTOR_DISTANCE;
 
 pub type PayloadKeyType = String;
@@ -126,6 +128,8 @@ pub enum Distance {
     Dot,
     // <https://simple.wikipedia.org/wiki/Manhattan_distance>
     Manhattan,
+    // <https://en.wikipedia.org/wiki/Hamming_distance>
+    Hamming,
 }
 
 impl Distance {
@@ -135,6 +139,7 @@ impl Distance {
             Distance::Euclid => EuclidMetric::preprocess(vector),
             Distance::Dot => DotProductMetric::preprocess(vector),
             Distance::Manhattan => ManhattanMetric::preprocess(vector),
+            Distance::Hamming => HammingMetric::preprocess(vector),
         }
     }
 
@@ -144,12 +149,13 @@ impl Distance {
             Distance::Euclid => EuclidMetric::postprocess(score),
             Distance::Dot => DotProductMetric::postprocess(score),
             Distance::Manhattan => ManhattanMetric::postprocess(score),
+            Distance::Hamming => HammingMetric::postprocess(score),
         }
     }
 
     pub fn distance_order(&self) -> Order {
         match self {
-            Distance::Cosine | Distance::Dot => Order::LargeBetter,
+            Distance::Cosine | Distance::Dot | Distance::Hamming => Order::LargeBetter,
             Distance::Euclid | Distance::Manhattan => Order::SmallBetter,
         }
     }
@@ -171,6 +177,7 @@ impl Distance {
             Distance::Euclid => EuclidMetric::similarity(v1, v2),
             Distance::Dot => DotProductMetric::similarity(v1, v2),
             Distance::Manhattan => ManhattanMetric::similarity(v1, v2),
+            Distance::Hamming => HammingMetric::similarity(v1, v2),
         }
     }
 }
