@@ -201,6 +201,46 @@ pub(crate) unsafe fn dot_similarity_avx(
 
 #[target_feature(enable = "avx")]
 #[target_feature(enable = "fma")]
+pub(crate) unsafe fn hamming_similarity_avx_optimized(
+    v1: &[VectorElementType],
+    v2: &[VectorElementType],
+) -> ScoreType {
+    let sum: u64 = 0;
+    let count: usize = v1.len() / 8;
+    let mut index: usize = 0;
+
+    let v1_base_ptr = v1.as_ptr();
+    let v2_base_ptr = v2.as_ptr();
+
+    // TODO: NOTE NOTE NOTE
+    // 1. On release --opt-level 3 its runs on average 20 nanoseconds faster - for random vectors
+    // 2. For more improvement let us use AVX512 - (__mm512)
+    // 3. this should be tested against actual data set of valid vectors
+    while index < count {
+        let x_a_to_load:*const f32 = v1_base_ptr.add(index * 8);
+        let x_b_to_load:*const f32 = v2_base_ptr.add(index * 8);
+
+        asm!(
+        "vmovups        ymm0, YMMWORD PTR [{x_a_to_load}]",
+        "vmovups        ymm1, YMMWORD PTR [{x_b_to_load}]",
+        "vcmpps         ymm0, ymm0, ymm1, 8",
+        "vmovmskps      eax, ymm0",
+        "popcnt         eax, eax",
+        "add            {sum}, rax",
+        x_a_to_load = in(reg) x_a_to_load,
+        x_b_to_load = in(reg) x_b_to_load,
+        sum = out(reg) sum,
+        );
+
+        index += 1;
+    }
+
+    return  ((sum - ((v1.len() % 8) as u32)) as usize / v1.len()) as f32
+}
+
+
+#[target_feature(enable = "avx")]
+#[target_feature(enable = "fma")]
 pub(crate) unsafe fn hamming_similarity_avx(
     v1: &[VectorElementType],
     v2: &[VectorElementType],
